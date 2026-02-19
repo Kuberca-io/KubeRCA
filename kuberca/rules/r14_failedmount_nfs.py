@@ -49,8 +49,10 @@ class FailedMountNFSRule(Rule):
 
         duration_ms = (time.monotonic() - t_start) * 1000.0
         return CorrelationResult(
-            changes=[], related_resources=related_resources,
-            objects_queried=objects_queried, duration_ms=duration_ms,
+            changes=[],
+            related_resources=related_resources,
+            objects_queried=objects_queried,
+            duration_ms=duration_ms,
         )
 
     def explain(self, event: EventRecord, correlation: CorrelationResult) -> RuleResult:
@@ -70,7 +72,9 @@ class FailedMountNFSRule(Rule):
         if is_stale:
             root_cause = f"Pod {event.resource_name} has a stale NFS file handle. The NFS server may be unreachable or the export path invalid."
         else:
-            root_cause = f"Pod {event.resource_name} failed to mount NFS volume. Check NFS server accessibility and export path."
+            root_cause = (
+                f"Pod {event.resource_name} failed to mount NFS volume. Check NFS server accessibility and export path."
+            )
 
         remediation = (
             f"Check NFS server connectivity from the node. Verify the NFS export path exists. "
@@ -80,6 +84,10 @@ class FailedMountNFSRule(Rule):
         _logger.info("r14_match", pod=event.resource_name, namespace=event.namespace, confidence=confidence)
 
         return RuleResult(
-            rule_id=self.rule_id, root_cause=root_cause, confidence=confidence,
-            evidence=evidence, affected_resources=affected, suggested_remediation=remediation,
+            rule_id=self.rule_id,
+            root_cause=root_cause,
+            confidence=confidence,
+            evidence=evidence,
+            affected_resources=affected,
+            suggested_remediation=remediation,
         )

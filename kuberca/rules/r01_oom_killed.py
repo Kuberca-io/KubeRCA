@@ -32,11 +32,7 @@ _MEMORY_FIELD_PREFIX = "spec.template.spec.containers"
 
 def _is_memory_change(fc: FieldChange) -> bool:
     """Return True if the FieldChange is a memory-limit change."""
-    return (
-        fc.field_path.startswith(_MEMORY_FIELD_PREFIX)
-        and "resources" in fc.field_path
-        and "memory" in fc.field_path
-    )
+    return fc.field_path.startswith(_MEMORY_FIELD_PREFIX) and "resources" in fc.field_path and "memory" in fc.field_path
 
 
 def _find_owning_deployment(
@@ -88,7 +84,11 @@ def _current_memory_limit(deployment: CachedResourceView) -> str:
     Returns "<unknown>" if the spec structure is not as expected.
     """
     try:
-        containers = deployment.spec.get("template", {}).get("spec", {}).get("containers", [])
+        raw_template = deployment.spec.get("template", {})
+        template: dict[str, object] = raw_template if isinstance(raw_template, dict) else {}
+        raw_spec = template.get("spec", {})
+        spec_dict: dict[str, object] = raw_spec if isinstance(raw_spec, dict) else {}
+        containers = spec_dict.get("containers", [])
         if containers and isinstance(containers, list):
             raw_first = containers[0]
             if not isinstance(raw_first, dict):
@@ -138,7 +138,7 @@ class OOMKilledRule(Rule):
         objects_queried += len(cache.list("Deployment", event.namespace))
 
         related_resources: list[CachedResourceView] = []
-        raw_changes: list[object] = []
+        raw_changes: list[FieldChange] = []
 
         if deployment is not None:
             related_resources.append(deployment)
@@ -151,10 +151,7 @@ class OOMKilledRule(Rule):
             objects_queried += 1  # ledger diff counts as one logical query
 
         # Filter to memory-limit-only changes (causally relevant per §4.3).
-        memory_changes: list[FieldChange] = [
-            fc for fc in raw_changes
-            if _is_memory_change(fc)
-        ]
+        memory_changes: list[FieldChange] = [fc for fc in raw_changes if _is_memory_change(fc)]
 
         duration_ms = (time.monotonic() - t_start) * 1000.0
         return CorrelationResult(
@@ -181,13 +178,8 @@ class OOMKilledRule(Rule):
         evidence.append(
             EvidenceItem(
                 type=EvidenceType.EVENT,
-                timestamp=event.last_seen.astimezone(UTC).strftime(
-                    "%Y-%m-%dT%H:%M:%S.000Z"
-                ),
-                summary=(
-                    f"Pod {event.resource_name} received {event.reason} "
-                    f"(count={event.count}): {event.message}"
-                ),
+                timestamp=event.last_seen.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                summary=(f"Pod {event.resource_name} received {event.reason} (count={event.count}): {event.message}"),
             )
         )
         affected.append(
@@ -198,9 +190,7 @@ class OOMKilledRule(Rule):
             )
         )
 
-        deploy: CachedResourceView | None = (
-            correlation.related_resources[0] if correlation.related_resources else None
-        )
+        deploy: CachedResourceView | None = correlation.related_resources[0] if correlation.related_resources else None
 
         if deploy:
             affected.append(
@@ -214,15 +204,11 @@ class OOMKilledRule(Rule):
         # Build root cause and remediation strings.
         if correlation.changes:
             # Use the most-recent memory change as the primary evidence item.
-            latest_change: FieldChange = max(
-                correlation.changes, key=lambda fc: fc.changed_at
-            )
+            latest_change: FieldChange = max(correlation.changes, key=lambda fc: fc.changed_at)
             evidence.append(
                 EvidenceItem(
                     type=EvidenceType.CHANGE,
-                    timestamp=latest_change.changed_at.astimezone(UTC).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    ),
+                    timestamp=latest_change.changed_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     summary=(
                         f"Memory limit changed on {deploy.name if deploy else 'deployment'} "
                         f"from {latest_change.old_value!r} to {latest_change.new_value!r} "

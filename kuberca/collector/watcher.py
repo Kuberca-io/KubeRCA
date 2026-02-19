@@ -397,9 +397,7 @@ class BaseWatcher(ABC):
         cache_relist_fallback_total.inc()
         try:
             async with asyncio.timeout(_RELIST_BUDGET_S):
-                pod_list = await self._api.list_pod_for_all_namespaces(
-                    _preload_content=True, watch=False
-                )
+                pod_list = await self._api.list_pod_for_all_namespaces(_preload_content=True, watch=False)
                 rv = ""
                 if hasattr(pod_list, "metadata") and pod_list.metadata is not None:
                     rv = getattr(pod_list.metadata, "resource_version", "") or ""

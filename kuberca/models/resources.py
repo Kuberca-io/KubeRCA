@@ -6,6 +6,7 @@ import copy
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
+from typing import cast
 
 
 class CacheReadiness(StrEnum):
@@ -81,7 +82,10 @@ class CachedResource:
             name=self.name,
             resource_version=self.resource_version,
             labels=copy.deepcopy(self.labels),
-            annotations=redact_dict(copy.deepcopy(self.annotations), is_annotation=True),
+            annotations=cast(
+                dict[str, str],
+                redact_dict(copy.deepcopy(cast(dict[str, object], self.annotations)), is_annotation=True),
+            ),
             spec=redact_dict(copy.deepcopy(self.spec)),
             status=redact_dict(copy.deepcopy(self.status)),
             last_updated=self.last_updated,

@@ -125,8 +125,7 @@ class WorkQueue:
         self._queue = asyncio.PriorityQueue(maxsize=_QUEUE_MAX_SIZE)
         self._running = True
         self._workers = [
-            asyncio.create_task(self._worker(i), name=f"work_queue_worker_{i}")
-            for i in range(num_workers)
+            asyncio.create_task(self._worker(i), name=f"work_queue_worker_{i}") for i in range(num_workers)
         ]
         _logger.info("work_queue_started", workers=num_workers)
 
@@ -183,21 +182,19 @@ class WorkQueue:
         fill_ratio = current_depth / _QUEUE_MAX_SIZE
 
         if fill_ratio > (_QUEUE_BACKGROUND_REJECT_THRESHOLD / _QUEUE_MAX_SIZE) and priority == Priority.BACKGROUND:
-                analysis_dropped_total.labels(priority=Priority.BACKGROUND.name).inc()
-                _logger.debug("background_request_dropped_queue_pressure", depth=current_depth)
-                raise QueueFullError(
-                    f"Queue >80% full ({current_depth}/{_QUEUE_MAX_SIZE}). "
-                    "Background requests are not accepted.",
-                    priority=priority,
-                )
+            analysis_dropped_total.labels(priority=Priority.BACKGROUND.name).inc()
+            _logger.debug("background_request_dropped_queue_pressure", depth=current_depth)
+            raise QueueFullError(
+                f"Queue >80% full ({current_depth}/{_QUEUE_MAX_SIZE}). Background requests are not accepted.",
+                priority=priority,
+            )
 
         if self._queue.full():
             # All priorities rejected at 100% capacity
             analysis_dropped_total.labels(priority=priority.name).inc()
             _logger.warning("queue_full_request_rejected", resource=resource, priority=priority.name)
             raise QueueFullError(
-                f"Analysis queue is full ({_QUEUE_MAX_SIZE} items). "
-                "Please retry later.",
+                f"Analysis queue is full ({_QUEUE_MAX_SIZE} items). Please retry later.",
                 priority=priority,
             )
 
@@ -277,8 +274,7 @@ class WorkQueue:
         if len(self._request_timestamps) >= effective_rate:
             analysis_dropped_total.labels(priority=priority.name).inc()
             raise QueueFullError(
-                f"Rate limit exceeded: {int(effective_rate)} requests/min. "
-                "Please retry later.",
+                f"Rate limit exceeded: {int(effective_rate)} requests/min. Please retry later.",
                 priority=priority,
             )
 

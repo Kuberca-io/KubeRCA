@@ -25,11 +25,13 @@ from kuberca.rules.confidence import compute_confidence
 
 _logger = get_logger("rule.r06_service_unreachable")
 
-_UNREACHABLE_REASONS = frozenset({
-    "FailedSync",
-    "NetworkNotReady",
-    "NotReady",
-})
+_UNREACHABLE_REASONS = frozenset(
+    {
+        "FailedSync",
+        "NetworkNotReady",
+        "NotReady",
+    }
+)
 
 _RE_UNREACHABLE = re.compile(
     r"(connection refused|endpoint not ready|no endpoints|"
@@ -114,9 +116,7 @@ class ServiceUnreachableRule(Rule):
         evidence: list[EvidenceItem] = [
             EvidenceItem(
                 type=EvidenceType.EVENT,
-                timestamp=event.last_seen.astimezone(UTC).strftime(
-                    "%Y-%m-%dT%H:%M:%S.000Z"
-                ),
+                timestamp=event.last_seen.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 summary=(
                     f"Service/endpoint unreachable for {event.resource_name} "
                     f"(count={event.count}): {event.message[:300]}"
@@ -131,25 +131,18 @@ class ServiceUnreachableRule(Rule):
             )
         ]
 
-        service: CachedResourceView | None = (
-            correlation.related_resources[0] if correlation.related_resources else None
-        )
+        service: CachedResourceView | None = correlation.related_resources[0] if correlation.related_resources else None
         if service and service.name != event.resource_name:
-            affected.append(
-                AffectedResource(kind="Service", namespace=service.namespace, name=service.name)
-            )
+            affected.append(AffectedResource(kind="Service", namespace=service.namespace, name=service.name))
 
         if correlation.changes:
             latest: FieldChange = max(correlation.changes, key=lambda fc: fc.changed_at)
             evidence.append(
                 EvidenceItem(
                     type=EvidenceType.CHANGE,
-                    timestamp=latest.changed_at.astimezone(UTC).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    ),
+                    timestamp=latest.changed_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     summary=(
-                        f"Service field changed: '{latest.field_path}' "
-                        f"{latest.old_value!r} → {latest.new_value!r}"
+                        f"Service field changed: '{latest.field_path}' {latest.old_value!r} → {latest.new_value!r}"
                     ),
                 )
             )

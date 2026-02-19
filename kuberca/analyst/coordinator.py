@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import re
 import time
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Any, Protocol
 
 import structlog
 
@@ -19,14 +19,13 @@ from kuberca.models.analysis import (
     AffectedResource,
     EvaluationMeta,
     EvidenceItem,
-    QualityCheckResult,
     RCAResponse,
     ResponseMeta,
     RuleResult,
     StateContextEntry,
 )
 from kuberca.models.events import DiagnosisSource, EventRecord, EventSource, EvidenceType, Severity
-from kuberca.models.resources import CacheReadiness
+from kuberca.models.resources import CachedResourceView, CacheReadiness, FieldChange
 from kuberca.observability.metrics import (
     llm_quality_check_failures_total,
     rca_duration_seconds,
@@ -36,6 +35,45 @@ from kuberca.observability.metrics import (
 if TYPE_CHECKING:
     from kuberca.graph.dependency_graph import DependencyGraph
     from kuberca.llm.analyzer import LLMAnalyzer, LLMResult
+
+
+class _CacheProto(Protocol):
+    """Minimal cache interface required by AnalystCoordinator."""
+
+    def get(self, kind: str, namespace: str, name: str) -> CachedResourceView | None: ...
+
+    def readiness(self) -> CacheReadiness: ...
+
+
+class _LedgerProto(Protocol):
+    """Minimal ledger interface required by AnalystCoordinator."""
+
+    def diff(
+        self,
+        kind: str,
+        namespace: str,
+        name: str,
+        since: timedelta | None = ...,
+        since_hours: float | None = ...,
+    ) -> list[FieldChange]: ...
+
+
+class _EventBufferProto(Protocol):
+    """Minimal event buffer interface required by AnalystCoordinator."""
+
+    def get_events(
+        self,
+        resource_kind: str,
+        namespace: str,
+        name: str,
+    ) -> list[EventRecord]: ...
+
+
+class _RuleEngineProto(Protocol):
+    """Minimal rule engine interface required by AnalystCoordinator."""
+
+    def evaluate(self, event: EventRecord) -> tuple[RuleResult | None, EvaluationMeta]: ...
+
 
 _logger = structlog.get_logger(component="analyst_coordinator")
 
@@ -118,7 +156,6 @@ def _utcnow_iso() -> str:
     return now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 
-
 def _parse_resource(resource: str) -> tuple[str, str, str]:
     """Parse and normalize a resource string into (kind, namespace, name).
 
@@ -155,17 +192,13 @@ def _validate_time_window(time_window: str) -> None:
     """Raise TimeWindowFormatError if time_window is not valid."""
     m = _TIME_WINDOW_RE.match(time_window)
     if not m:
-        raise TimeWindowFormatError(
-            f"Invalid time_window format: {time_window!r}. Must match [0-9]+(m|h|d)."
-        )
+        raise TimeWindowFormatError(f"Invalid time_window format: {time_window!r}. Must match [0-9]+(m|h|d).")
     value = int(m.group(1))
     unit = m.group(2)
     max_hours = 24
     hours = value if unit == "h" else (value / 60 if unit == "m" else value * 24)
     if hours > max_hours:
-        raise TimeWindowFormatError(
-            f"time_window {time_window!r} exceeds maximum of 24h."
-        )
+        raise TimeWindowFormatError(f"time_window {time_window!r} exceeds maximum of 24h.")
 
 
 def _dedup_affected_resources(resources: list[AffectedResource]) -> list[AffectedResource]:
@@ -344,12 +377,12 @@ class AnalystCoordinator:
 
     def __init__(
         self,
-        rule_engine: object,  # RuleEngine — typed as object to avoid circular import
+        rule_engine: _RuleEngineProto,
         llm_analyzer: LLMAnalyzer | None,
-        cache: object,  # ResourceCache
-        ledger: object,  # ChangeLedger
-        event_buffer: object,  # EventBuffer
-        config: object,  # KubeRCAConfig
+        cache: _CacheProto,
+        ledger: _LedgerProto,
+        event_buffer: _EventBufferProto,
+        config: Any,
         dependency_graph: DependencyGraph | None = None,
     ) -> None:
         self._rule_engine = rule_engine
@@ -473,8 +506,7 @@ class AnalystCoordinator:
         # Step 6: DEGRADED — skip LLM
         if cache_readiness == CacheReadiness.DEGRADED:
             suppression_msg = (
-                "LLM escalation suppressed: cache degraded, "
-                "evidence package integrity cannot be guaranteed."
+                "LLM escalation suppressed: cache degraded, evidence package integrity cannot be guaranteed."
             )
             degraded_warnings = self._degraded_warnings()
             _logger.warning(
@@ -559,8 +591,7 @@ class AnalystCoordinator:
                 if not quality.passed:
                     llm_result.confidence = min(llm_result.confidence, 0.35)
                     llm_warning.append(
-                        f"LLM quality check failed after {quality_retries} retries: "
-                        f"{', '.join(quality.failures)}"
+                        f"LLM quality check failed after {quality_retries} retries: {', '.join(quality.failures)}"
                     )
 
                 _logger.info(
@@ -594,12 +625,8 @@ class AnalystCoordinator:
         rca_requests_total.labels(diagnosed_by=DiagnosisSource.INCONCLUSIVE.value).inc()
         inconclusive_warnings = eval_meta.warnings[:]
         if self._llm_analyzer is not None and not self._llm_analyzer.available:
-            ollama_endpoint = getattr(
-                getattr(self._config, "ollama", None), "endpoint", "unknown"
-            )
-            inconclusive_warnings.append(
-                f"LLM unavailable: Ollama not reachable at {ollama_endpoint}"
-            )
+            ollama_endpoint = getattr(getattr(self._config, "ollama", None), "endpoint", "unknown")
+            inconclusive_warnings.append(f"LLM unavailable: Ollama not reachable at {ollama_endpoint}")
         _record_duration(start_ms, "inconclusive", None)
         return _inconclusive_response(
             root_cause=f"No diagnosis determined for {canonical_resource}",
@@ -629,7 +656,7 @@ class AnalystCoordinator:
         if kind != "Pod":
             return []
         try:
-            cached = self._cache.get(kind, namespace, name)  # type: ignore[union-attr]
+            cached = self._cache.get(kind, namespace, name)
             if cached is None:
                 return []
         except Exception:
@@ -637,7 +664,8 @@ class AnalystCoordinator:
 
         now = datetime.now(tz=UTC)
         results: list[EventRecord] = []
-        container_statuses = cached.status.get("containerStatuses") or []  # type: ignore[union-attr]
+        _raw_cs = cached.status.get("containerStatuses")
+        container_statuses: list[object] = _raw_cs if isinstance(_raw_cs, list) else []
         for cs in container_statuses:
             if not isinstance(cs, dict):
                 continue
@@ -645,46 +673,50 @@ class AnalystCoordinator:
             # Terminated container (state.terminated or lastState.terminated)
             state = cs.get("state", {})
             last_state = cs.get("lastState") or cs.get("last_state", {})
-            terminated = (
-                (state.get("terminated") if isinstance(state, dict) else None)
-                or (last_state.get("terminated") if isinstance(last_state, dict) else None)
+            terminated = (state.get("terminated") if isinstance(state, dict) else None) or (
+                last_state.get("terminated") if isinstance(last_state, dict) else None
             )
             if isinstance(terminated, dict):
                 reason = terminated.get("reason", "")
                 if reason in ("OOMKilled", "OOMKilling"):
-                    results.append(EventRecord(
-                        source=EventSource.POD_PHASE,
-                        severity=Severity.CRITICAL,
-                        reason=reason,
-                        message=terminated.get("message", f"Container terminated: {reason}"),
-                        namespace=namespace,
-                        resource_kind="Pod",
-                        resource_name=name,
-                        first_seen=now,
-                        last_seen=now,
-                        cluster_id=getattr(self._config, "cluster_id", ""),
-                    ))
+                    results.append(
+                        EventRecord(
+                            source=EventSource.POD_PHASE,
+                            severity=Severity.CRITICAL,
+                            reason=reason,
+                            message=terminated.get("message", f"Container terminated: {reason}"),
+                            namespace=namespace,
+                            resource_kind="Pod",
+                            resource_name=name,
+                            first_seen=now,
+                            last_seen=now,
+                            cluster_id=getattr(self._config, "cluster_id", ""),
+                        )
+                    )
 
             # Waiting container (state.waiting)
             waiting = state.get("waiting") if isinstance(state, dict) else None
             if isinstance(waiting, dict):
                 reason = waiting.get("reason", "")
                 if reason in ("CrashLoopBackOff", "ImagePullBackOff", "ErrImagePull"):
-                    results.append(EventRecord(
-                        source=EventSource.CORE_EVENT,
-                        severity=Severity.ERROR,
-                        reason=reason,
-                        message=waiting.get("message", f"Container waiting: {reason}"),
-                        namespace=namespace,
-                        resource_kind="Pod",
-                        resource_name=name,
-                        first_seen=now,
-                        last_seen=now,
-                        cluster_id=getattr(self._config, "cluster_id", ""),
-                    ))
+                    results.append(
+                        EventRecord(
+                            source=EventSource.CORE_EVENT,
+                            severity=Severity.ERROR,
+                            reason=reason,
+                            message=waiting.get("message", f"Container waiting: {reason}"),
+                            namespace=namespace,
+                            resource_kind="Pod",
+                            resource_name=name,
+                            first_seen=now,
+                            last_seen=now,
+                            cluster_id=getattr(self._config, "cluster_id", ""),
+                        )
+                    )
 
         # Also check init container statuses
-        init_statuses = cached.status.get("initContainerStatuses") or []  # type: ignore[union-attr]
+        _raw_init = cached.status.get("initContainerStatuses")
+        init_statuses: list[object] = _raw_init if isinstance(_raw_init, list) else []
         for cs in init_statuses:
             if not isinstance(cs, dict):
                 continue
@@ -693,25 +725,27 @@ class AnalystCoordinator:
             if isinstance(waiting, dict):
                 reason = waiting.get("reason", "")
                 if reason in ("CrashLoopBackOff", "ImagePullBackOff", "ErrImagePull"):
-                    results.append(EventRecord(
-                        source=EventSource.CORE_EVENT,
-                        severity=Severity.ERROR,
-                        reason=reason,
-                        message=waiting.get("message", f"Init container waiting: {reason}"),
-                        namespace=namespace,
-                        resource_kind="Pod",
-                        resource_name=name,
-                        first_seen=now,
-                        last_seen=now,
-                        cluster_id=getattr(self._config, "cluster_id", ""),
-                    ))
+                    results.append(
+                        EventRecord(
+                            source=EventSource.CORE_EVENT,
+                            severity=Severity.ERROR,
+                            reason=reason,
+                            message=waiting.get("message", f"Init container waiting: {reason}"),
+                            namespace=namespace,
+                            resource_kind="Pod",
+                            resource_name=name,
+                            first_seen=now,
+                            last_seen=now,
+                            cluster_id=getattr(self._config, "cluster_id", ""),
+                        )
+                    )
 
         return results
 
     def _get_cache_readiness(self) -> CacheReadiness:
         """Read the current cache readiness state, defaulting to READY on error."""
         try:
-            return self._cache.readiness()  # type: ignore[union-attr]
+            return self._cache.readiness()
         except Exception as exc:
             _logger.error("cache_readiness_error", error=str(exc))
             return CacheReadiness.READY
@@ -720,7 +754,10 @@ class AnalystCoordinator:
         """Collect per-kind warming warnings from the cache."""
         try:
             # If the cache exposes a warming_kinds() method, use it
-            kinds: list[str] = self._cache.warming_kinds()  # type: ignore[union-attr]
+            warming_kinds_fn = getattr(self._cache, "warming_kinds", None)
+            if warming_kinds_fn is None:
+                raise AttributeError("warming_kinds not available")
+            kinds: list[str] = warming_kinds_fn()
             warnings: list[str] = [f"Waiting for initial list: {', '.join(kinds)}"] if kinds else []
             return warnings
         except AttributeError:
@@ -732,7 +769,10 @@ class AnalystCoordinator:
     def _degraded_warnings(self) -> list[str]:
         """Collect per-kind staleness warnings from the cache."""
         try:
-            staleness = self._cache.staleness_warnings()  # type: ignore[union-attr]
+            staleness_warnings_fn = getattr(self._cache, "staleness_warnings", None)
+            if staleness_warnings_fn is None:
+                raise AttributeError("staleness_warnings not available")
+            staleness = staleness_warnings_fn()
             return staleness if isinstance(staleness, list) else []
         except AttributeError:
             return ["Cache degraded: one or more resource kinds unavailable."]
@@ -751,7 +791,7 @@ class AnalystCoordinator:
         Returns events sorted by last_seen descending (most recent first).
         """
         try:
-            events: list[EventRecord] = self._event_buffer.get_events(  # type: ignore[union-attr]
+            events: list[EventRecord] = self._event_buffer.get_events(
                 resource_kind=kind,
                 namespace=namespace,
                 name=name,
@@ -767,7 +807,7 @@ class AnalystCoordinator:
     ) -> tuple[RuleResult | None, EvaluationMeta]:
         """Invoke the rule engine and return (result, meta)."""
         try:
-            result, meta = self._rule_engine.evaluate(event)  # type: ignore[union-attr]
+            result, meta = self._rule_engine.evaluate(event)
             return result, meta
         except Exception as exc:
             _logger.error("rule_engine_error", error=str(exc))
@@ -818,11 +858,9 @@ class AnalystCoordinator:
         namespace: str,
         name: str,
         time_window: str,
-    ) -> list:  # list[FieldChange]
+    ) -> list[FieldChange]:
         """Query the change ledger for recent diffs."""
         try:
-            from datetime import timedelta
-
             m = _TIME_WINDOW_RE.match(time_window)
             if m is None:
                 return []
@@ -835,7 +873,7 @@ class AnalystCoordinator:
             else:
                 delta = timedelta(days=value)
 
-            return self._ledger.diff(kind, namespace, name, since=delta)  # type: ignore[union-attr]
+            return self._ledger.diff(kind, namespace, name, since=delta)
         except Exception as exc:
             _logger.warning("ledger_diff_error", error=str(exc))
             return []
@@ -844,16 +882,16 @@ class AnalystCoordinator:
         self,
         namespace: str,
         name: str,
-    ) -> list[dict]:  # type: ignore[type-arg]
+    ) -> list[dict[str, Any]]:
         """Fetch container statuses from the cache for the incident pod."""
         try:
-            resource = self._cache.get("Pod", namespace, name)  # type: ignore[union-attr]
+            resource = self._cache.get("Pod", namespace, name)
             if resource is None:
                 return []
             status = resource.status
             containers = status.get("containerStatuses", [])
             if isinstance(containers, list):
-                return containers  # type: ignore[return-value]
+                return [c for c in containers if isinstance(c, dict)]
             return []
         except Exception as exc:
             _logger.warning("container_status_error", error=str(exc))
@@ -864,10 +902,10 @@ class AnalystCoordinator:
         kind: str,
         namespace: str,
         name: str,
-    ) -> list[dict]:  # type: ignore[type-arg]
+    ) -> list[dict[str, Any]]:
         """Fetch the incident resource spec from cache as a redacted view."""
         try:
-            resource = self._cache.get(kind, namespace, name)  # type: ignore[union-attr]
+            resource = self._cache.get(kind, namespace, name)
             if resource is None:
                 return []
             return [
@@ -905,22 +943,24 @@ class AnalystCoordinator:
             for res in downstream.resources:
                 if res.kind == kind and res.namespace == namespace and res.name == name:
                     continue  # skip self
-                cached = self._cache.get(res.kind, res.namespace, res.name)  # type: ignore[union-attr]
+                cached = self._cache.get(res.kind, res.namespace, res.name)
                 exists = cached is not None
                 status_summary = "<not found>"
                 if cached is not None:
-                    phase = cached.status.get("phase", "")  # type: ignore[union-attr]
+                    phase = cached.status.get("phase", "")
                     status_summary = str(phase) if phase else "Active"
                 # Derive relationship from edges
                 relationship = self._edge_relationship(downstream.edges, kind, namespace, name, res)
-                entries.append(StateContextEntry(
-                    kind=res.kind,
-                    namespace=res.namespace,
-                    name=res.name,
-                    exists=exists,
-                    status_summary=status_summary,
-                    relationship=relationship,
-                ))
+                entries.append(
+                    StateContextEntry(
+                        kind=res.kind,
+                        namespace=res.namespace,
+                        name=res.name,
+                        exists=exists,
+                        status_summary=status_summary,
+                        relationship=relationship,
+                    )
+                )
 
             # Get upstream dependents (who depends on this resource)
             upstream = self._dependency_graph.upstream(kind, namespace, name, max_depth=1)
@@ -930,21 +970,23 @@ class AnalystCoordinator:
                 # Avoid duplicates
                 if any(e.kind == res.kind and e.namespace == res.namespace and e.name == res.name for e in entries):
                     continue
-                cached = self._cache.get(res.kind, res.namespace, res.name)  # type: ignore[union-attr]
+                cached = self._cache.get(res.kind, res.namespace, res.name)
                 exists = cached is not None
                 status_summary = "<not found>"
                 if cached is not None:
-                    phase = cached.status.get("phase", "")  # type: ignore[union-attr]
+                    phase = cached.status.get("phase", "")
                     status_summary = str(phase) if phase else "Active"
                 relationship = self._edge_relationship(upstream.edges, kind, namespace, name, res)
-                entries.append(StateContextEntry(
-                    kind=res.kind,
-                    namespace=res.namespace,
-                    name=res.name,
-                    exists=exists,
-                    status_summary=status_summary,
-                    relationship=f"{res.kind} depends on {kind}/{name}" if not relationship else relationship,
-                ))
+                entries.append(
+                    StateContextEntry(
+                        kind=res.kind,
+                        namespace=res.namespace,
+                        name=res.name,
+                        exists=exists,
+                        status_summary=status_summary,
+                        relationship=relationship if relationship else f"{res.kind} depends on {kind}/{name}",
+                    )
+                )
         except Exception as exc:
             _logger.warning("state_context_build_error", error=str(exc))
 
@@ -952,22 +994,26 @@ class AnalystCoordinator:
 
     @staticmethod
     def _edge_relationship(
-        edges: list,
+        edges: list[Any],
         src_kind: str,
         src_ns: str,
         src_name: str,
         target: object,
     ) -> str:
         """Derive a human-readable relationship string from graph edges."""
+        t_kind = getattr(target, "kind", "")
+        t_name = getattr(target, "name", "")
         for edge in edges:
-            t_kind = getattr(target, "kind", "")
-            t_ns = getattr(target, "namespace", "")
-            t_name = getattr(target, "name", "")
             if (
-                (edge.source.kind == src_kind and edge.source.name == src_name
-                 and edge.target.kind == t_kind and edge.target.name == t_name)
-                or (edge.target.kind == src_kind and edge.target.name == src_name
-                    and edge.source.kind == t_kind and edge.source.name == t_name)
+                edge.source.kind == src_kind
+                and edge.source.name == src_name
+                and edge.target.kind == t_kind
+                and edge.target.name == t_name
+            ) or (
+                edge.target.kind == src_kind
+                and edge.target.name == src_name
+                and edge.source.kind == t_kind
+                and edge.source.name == t_name
             ):
                 return f"{edge.edge_type.value} link between {src_kind}/{src_name} and {t_kind}/{t_name}"
         return ""
@@ -992,11 +1038,13 @@ class AnalystCoordinator:
             for res in upstream.resources:
                 if res.kind == kind and res.namespace == namespace and res.name == name:
                     continue
-                resources.append(AffectedResource(
-                    kind=res.kind,
-                    namespace=res.namespace,
-                    name=res.name,
-                ))
+                resources.append(
+                    AffectedResource(
+                        kind=res.kind,
+                        namespace=res.namespace,
+                        name=res.name,
+                    )
+                )
             return resources if resources else None
         except Exception as exc:
             _logger.warning("blast_radius_error", error=str(exc))

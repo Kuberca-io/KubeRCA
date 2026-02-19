@@ -92,19 +92,13 @@ _COMMAND_ARG_SECRET_PREFIXES: Final[tuple[str, ...]] = (
 # ---------------------------------------------------------------------------
 
 # JWT: three dot-separated base64url segments (header.payload.signature)
-_RE_JWT: Final[re.Pattern[str]] = re.compile(
-    r"^[A-Za-z0-9+/=_-]{10,}\.[A-Za-z0-9+/=_-]{10,}\.[A-Za-z0-9+/=_-]{10,}$"
-)
+_RE_JWT: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9+/=_-]{10,}\.[A-Za-z0-9+/=_-]{10,}\.[A-Za-z0-9+/=_-]{10,}$")
 
 # Long base64: >64 chars drawn exclusively from the base64 alphabet (std + url)
-_RE_LONG_BASE64: Final[re.Pattern[str]] = re.compile(
-    r"^[A-Za-z0-9+/=]{65,}$"
-)
+_RE_LONG_BASE64: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9+/=]{65,}$")
 
 # URL-embedded token query parameters
-_RE_URL_TOKEN: Final[re.Pattern[str]] = re.compile(
-    r"[?&](?:token|access_token|api_key)=[^\s&\"'#]+"
-)
+_RE_URL_TOKEN: Final[re.Pattern[str]] = re.compile(r"[?&](?:token|access_token|api_key)=[^\s&\"'#]+")
 
 # Authorization header value (anything that looks like an auth value)
 _RE_AUTHORIZATION_HEADER: Final[re.Pattern[str]] = re.compile(
@@ -320,10 +314,7 @@ def _redact_recursive(data: dict[str, object]) -> dict[str, object]:
 
         # --- Special handling for command / args arrays ---
         if key in {"command", "args"} and isinstance(value, list):
-            data[key] = [
-                _redact_command_arg(arg) if isinstance(arg, str) else arg
-                for arg in value
-            ]
+            data[key] = [_redact_command_arg(arg) if isinstance(arg, str) else arg for arg in value]
             continue
 
         # --- Key denylist (applies before descending into nested dicts) ---
@@ -341,7 +332,11 @@ def _redact_recursive(data: dict[str, object]) -> dict[str, object]:
             continue
 
         # --- Leaf value: apply heuristics ---
-        if isinstance(value, str) and key.lower() not in _VALUE_HEURISTIC_ALLOWLIST and _value_matches_heuristics(value):
+        if (
+            isinstance(value, str)
+            and key.lower() not in _VALUE_HEURISTIC_ALLOWLIST
+            and _value_matches_heuristics(value)
+        ):
             data[key] = _hash_value(value)
 
     return data

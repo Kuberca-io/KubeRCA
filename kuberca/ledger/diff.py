@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from typing import cast
 
 from kuberca.models.resources import FieldChange
 
@@ -101,7 +102,7 @@ def _diff_dicts(
             # Added in new_spec — treat old as None for the leaf / subtree
             _diff_values(
                 None,
-                new_dict[key],
+                cast(_SpecValue, new_dict[key]),
                 path=child_path,
                 changes=changes,
                 changed_at=changed_at,
@@ -109,7 +110,7 @@ def _diff_dicts(
         elif key not in new_dict:
             # Removed in new_spec — treat new as None
             _diff_values(
-                old_dict[key],
+                cast(_SpecValue, old_dict[key]),
                 None,
                 path=child_path,
                 changes=changes,
@@ -117,8 +118,8 @@ def _diff_dicts(
             )
         else:
             _diff_values(
-                old_dict[key],
-                new_dict[key],
+                cast(_SpecValue, old_dict[key]),
+                cast(_SpecValue, new_dict[key]),
                 path=child_path,
                 changes=changes,
                 changed_at=changed_at,
@@ -140,6 +141,6 @@ def _diff_lists(
     max_len = max(len(old_list), len(new_list))
     for i in range(max_len):
         child_path = f"{path}[{i}]"
-        old_item: _SpecValue = old_list[i] if i < len(old_list) else None
-        new_item: _SpecValue = new_list[i] if i < len(new_list) else None
+        old_item: _SpecValue = cast(_SpecValue, old_list[i]) if i < len(old_list) else None
+        new_item: _SpecValue = cast(_SpecValue, new_list[i]) if i < len(new_list) else None
         _diff_values(old_item, new_item, path=child_path, changes=changes, changed_at=changed_at)

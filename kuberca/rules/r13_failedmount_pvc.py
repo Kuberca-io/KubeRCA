@@ -68,8 +68,10 @@ class FailedMountPVCRule(Rule):
 
         duration_ms = (time.monotonic() - t_start) * 1000.0
         return CorrelationResult(
-            changes=[], related_resources=related_resources,
-            objects_queried=objects_queried, duration_ms=duration_ms,
+            changes=[],
+            related_resources=related_resources,
+            objects_queried=objects_queried,
+            duration_ms=duration_ms,
         )
 
     def explain(self, event: EventRecord, correlation: CorrelationResult) -> RuleResult:
@@ -86,7 +88,8 @@ class FailedMountPVCRule(Rule):
         affected = [AffectedResource(kind="Pod", namespace=event.namespace, name=event.resource_name)]
 
         unbound = [
-            r.name for r in correlation.related_resources
+            r.name
+            for r in correlation.related_resources
             if r.kind == "PersistentVolumeClaim" and r.status.get("phase", "Bound") != "Bound"
         ]
 
@@ -97,11 +100,17 @@ class FailedMountPVCRule(Rule):
         else:
             root_cause = f"Pod {event.resource_name} failed to mount PVC volume. Check PVC binding status."
 
-        remediation = f"Check PVC status: `kubectl get pvc -n {event.namespace}`. Check PV availability: `kubectl get pv`."
+        remediation = (
+            f"Check PVC status: `kubectl get pvc -n {event.namespace}`. Check PV availability: `kubectl get pv`."
+        )
 
         _logger.info("r13_match", pod=event.resource_name, namespace=event.namespace, confidence=confidence)
 
         return RuleResult(
-            rule_id=self.rule_id, root_cause=root_cause, confidence=confidence,
-            evidence=evidence, affected_resources=affected, suggested_remediation=remediation,
+            rule_id=self.rule_id,
+            root_cause=root_cause,
+            confidence=confidence,
+            evidence=evidence,
+            affected_resources=affected,
+            suggested_remediation=remediation,
         )

@@ -31,13 +31,9 @@ class DependencyGraph:
     def __init__(self) -> None:
         self._nodes: dict[tuple[str, str, str], GraphNode] = {}
         # Forward edges: source_key -> list of (target_key, edge)
-        self._forward: dict[
-            tuple[str, str, str], list[tuple[tuple[str, str, str], GraphEdge]]
-        ] = defaultdict(list)
+        self._forward: dict[tuple[str, str, str], list[tuple[tuple[str, str, str], GraphEdge]]] = defaultdict(list)
         # Reverse edges: target_key -> list of (source_key, edge)
-        self._reverse: dict[
-            tuple[str, str, str], list[tuple[tuple[str, str, str], GraphEdge]]
-        ] = defaultdict(list)
+        self._reverse: dict[tuple[str, str, str], list[tuple[tuple[str, str, str], GraphEdge]]] = defaultdict(list)
 
     @property
     def node_count(self) -> int:
@@ -99,11 +95,11 @@ class DependencyGraph:
         if snapshot.kind == "PersistentVolumeClaim":
             volume_name = ""
             if isinstance(spec, dict):
-                volume_name = spec.get("volumeName", "") or ""
+                volume_name = str(spec.get("volumeName", "") or "")
                 if not volume_name:
                     inner_spec = spec.get("spec", {})
                     if isinstance(inner_spec, dict):
-                        volume_name = inner_spec.get("volumeName", "") or ""
+                        volume_name = str(inner_spec.get("volumeName", "") or "")
             if volume_name:
                 pv_node = self._ensure_node("PersistentVolume", "", str(volume_name))
                 edge = GraphEdge(
@@ -136,9 +132,7 @@ class DependencyGraph:
         if key in self._reverse:
             for source_key, _edge in self._reverse[key]:
                 if source_key in self._forward:
-                    self._forward[source_key] = [
-                        (tk, e) for tk, e in self._forward[source_key] if tk != key
-                    ]
+                    self._forward[source_key] = [(tk, e) for tk, e in self._forward[source_key] if tk != key]
             del self._reverse[key]
         self._nodes.pop(key, None)
 
@@ -247,9 +241,7 @@ class DependencyGraph:
                 if isinstance(pvc_ref, dict):
                     claim_name = pvc_ref.get("claimName", "")
                     if claim_name:
-                        pvc_node = self._ensure_node(
-                            "PersistentVolumeClaim", node.namespace, str(claim_name)
-                        )
+                        pvc_node = self._ensure_node("PersistentVolumeClaim", node.namespace, str(claim_name))
                         edge = GraphEdge(
                             source=node,
                             target=pvc_node,
@@ -279,9 +271,7 @@ class DependencyGraph:
                 if isinstance(secret_ref, dict):
                     secret_name = secret_ref.get("secretName", "")
                     if secret_name:
-                        secret_node = self._ensure_node(
-                            "Secret", node.namespace, str(secret_name)
-                        )
+                        secret_node = self._ensure_node("Secret", node.namespace, str(secret_name))
                         edge = GraphEdge(
                             source=node,
                             target=secret_node,
@@ -304,9 +294,7 @@ class DependencyGraph:
                             continue
                         cm_ref = ef.get("configMapRef")
                         if isinstance(cm_ref, dict) and cm_ref.get("name"):
-                            cm_node = self._ensure_node(
-                                "ConfigMap", node.namespace, str(cm_ref["name"])
-                            )
+                            cm_node = self._ensure_node("ConfigMap", node.namespace, str(cm_ref["name"]))
                             edge = GraphEdge(
                                 source=node,
                                 target=cm_node,
@@ -318,9 +306,7 @@ class DependencyGraph:
 
                         secret_ref = ef.get("secretRef")
                         if isinstance(secret_ref, dict) and secret_ref.get("name"):
-                            secret_node = self._ensure_node(
-                                "Secret", node.namespace, str(secret_ref["name"])
-                            )
+                            secret_node = self._ensure_node("Secret", node.namespace, str(secret_ref["name"]))
                             edge = GraphEdge(
                                 source=node,
                                 target=secret_node,
@@ -357,9 +343,7 @@ class DependencyGraph:
         if key in self._forward:
             for target_key, _edge in self._forward[key]:
                 if target_key in self._reverse:
-                    self._reverse[target_key] = [
-                        (sk, e) for sk, e in self._reverse[target_key] if sk != key
-                    ]
+                    self._reverse[target_key] = [(sk, e) for sk, e in self._reverse[target_key] if sk != key]
             del self._forward[key]
 
     def _traverse(

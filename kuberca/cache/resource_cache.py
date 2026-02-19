@@ -35,6 +35,7 @@ them, covering up to 15 resource kinds.
 from __future__ import annotations
 
 import asyncio
+import builtins
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -289,11 +290,11 @@ class ResourceCache:
             name: Resource name.
         """
         resource = self._store.get(kind, {}).get(namespace, {}).get(name)
-        hit = resource is not None
-        self._record_access(hit)
-        if not hit:
+        if resource is None:
+            self._record_access(False)
             cache_misses_total.inc()
             return None
+        self._record_access(True)
         return resource.redacted_view()
 
     def list(self, kind: str, ns: str = "") -> list[CachedResourceView]:
@@ -323,7 +324,7 @@ class ResourceCache:
         kind: str,
         labels: dict[str, str],
         ns: str = "",
-    ) -> list[CachedResourceView]:
+    ) -> builtins.list[CachedResourceView]:
         """Return cached resources whose labels are a superset of ``labels``.
 
         Args:
@@ -565,9 +566,7 @@ class ResourceCache:
     def _emit_state_metric(self) -> None:
         """Update the cache_state gauge for all states."""
         for state in CacheReadiness:
-            cache_state.labels(state=state.value).set(
-                1 if self._readiness == state else 0
-            )
+            cache_state.labels(state=state.value).set(1 if self._readiness == state else 0)
 
 
 # ---------------------------------------------------------------------------

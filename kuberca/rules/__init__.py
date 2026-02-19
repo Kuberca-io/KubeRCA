@@ -42,30 +42,34 @@ __all__ = [
 _logger = get_logger("rule_engine.registry")
 
 # Tier 1 rules ship unconditionally (§4.5 — these are ship-blocking).
-_TIER1_RULE_IDS: frozenset[str] = frozenset({
-    "R01_oom_killed",
-    "R02_crash_loop",
-    "R03_failed_scheduling",
-})
+_TIER1_RULE_IDS: frozenset[str] = frozenset(
+    {
+        "R01_oom_killed",
+        "R02_crash_loop",
+        "R03_failed_scheduling",
+    }
+)
 
 # Tier 2 rules are gated by the tier2_enabled config flag.
-_TIER2_RULE_IDS: frozenset[str] = frozenset({
-    "R04_image_pull",
-    "R05_hpa_misbehavior",
-    "R06_service_unreachable",
-    "R07_config_drift",
-    "R08_volume_mount",
-    "R09_node_pressure",
-    "R10_readiness_probe",
-    "R11_failedmount_configmap",
-    "R12_failedmount_secret",
-    "R13_failedmount_pvc",
-    "R14_failedmount_nfs",
-    "R15_failedscheduling_node",
-    "R16_exceed_quota",
-    "R17_evicted",
-    "R18_claim_lost",
-})
+_TIER2_RULE_IDS: frozenset[str] = frozenset(
+    {
+        "R04_image_pull",
+        "R05_hpa_misbehavior",
+        "R06_service_unreachable",
+        "R07_config_drift",
+        "R08_volume_mount",
+        "R09_node_pressure",
+        "R10_readiness_probe",
+        "R11_failedmount_configmap",
+        "R12_failedmount_secret",
+        "R13_failedmount_pvc",
+        "R14_failedmount_nfs",
+        "R15_failedscheduling_node",
+        "R16_exceed_quota",
+        "R17_evicted",
+        "R18_claim_lost",
+    }
+)
 
 
 def discover_rules() -> list[type[Rule]]:

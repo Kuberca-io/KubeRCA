@@ -123,10 +123,7 @@ class SlackNotificationChannel(NotificationChannel):
                             "elements": [
                                 {
                                     "type": "mrkdwn",
-                                    "text": (
-                                        f"Alert ID: `{alert.alert_id}` "
-                                        f"| Detected at: {detected_at}"
-                                    ),
+                                    "text": (f"Alert ID: `{alert.alert_id}` | Detected at: {detected_at}"),
                                 }
                             ],
                         },

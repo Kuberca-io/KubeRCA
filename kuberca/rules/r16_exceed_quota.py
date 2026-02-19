@@ -34,9 +34,7 @@ class ExceedQuotaRule(Rule):
         msg = event.message.lower()
         if "exceeded quota" in msg:
             return True
-        if event.reason == "FailedCreate" and "quota" in msg:
-            return True
-        return False
+        return event.reason == "FailedCreate" and "quota" in msg
 
     def correlate(self, event: EventRecord, cache: ResourceCache, ledger: ChangeLedger) -> CorrelationResult:
         t_start = time.monotonic()
@@ -50,8 +48,10 @@ class ExceedQuotaRule(Rule):
 
         duration_ms = (time.monotonic() - t_start) * 1000.0
         return CorrelationResult(
-            changes=[], related_resources=related_resources,
-            objects_queried=objects_queried, duration_ms=duration_ms,
+            changes=[],
+            related_resources=related_resources,
+            objects_queried=objects_queried,
+            duration_ms=duration_ms,
         )
 
     def explain(self, event: EventRecord, correlation: CorrelationResult) -> RuleResult:
@@ -84,6 +84,10 @@ class ExceedQuotaRule(Rule):
         _logger.info("r16_match", namespace=event.namespace, confidence=confidence, quotas=quota_names)
 
         return RuleResult(
-            rule_id=self.rule_id, root_cause=root_cause, confidence=confidence,
-            evidence=evidence, affected_resources=affected, suggested_remediation=remediation,
+            rule_id=self.rule_id,
+            root_cause=root_cause,
+            confidence=confidence,
+            evidence=evidence,
+            affected_resources=affected,
+            suggested_remediation=remediation,
         )

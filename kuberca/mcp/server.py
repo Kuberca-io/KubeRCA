@@ -56,7 +56,7 @@ class MCPServer:
     def _register_handlers(self) -> None:
         """Wire list-tools and call-tool handlers onto the MCP Server."""
 
-        @self._server.list_tools()
+        @self._server.list_tools()  # type: ignore[no-untyped-call, untyped-decorator]
         async def _list_tools() -> list[Tool]:
             return [
                 Tool(
@@ -71,10 +71,7 @@ class MCPServer:
                         "properties": {
                             "namespace": {
                                 "type": "string",
-                                "description": (
-                                    "Optional namespace filter.  "
-                                    "Omit to include all namespaces."
-                                ),
+                                "description": ("Optional namespace filter.  Omit to include all namespaces."),
                             },
                         },
                         "additionalProperties": False,
@@ -92,16 +89,12 @@ class MCPServer:
                         "properties": {
                             "resource": {
                                 "type": "string",
-                                "description": (
-                                    "Resource in Kind/namespace/name format, "
-                                    "e.g. 'Pod/default/my-pod'."
-                                ),
+                                "description": ("Resource in Kind/namespace/name format, e.g. 'Pod/default/my-pod'."),
                             },
                             "time_window": {
                                 "type": "string",
                                 "description": (
-                                    "Look-back window, e.g. '2h', '30m', '1d'.  "
-                                    "Defaults to server configuration."
+                                    "Look-back window, e.g. '2h', '30m', '1d'.  Defaults to server configuration."
                                 ),
                             },
                         },
@@ -111,7 +104,7 @@ class MCPServer:
                 ),
             ]
 
-        @self._server.call_tool()
+        @self._server.call_tool()  # type: ignore[untyped-decorator]
         async def _call_tool(
             name: str,
             arguments: dict[str, Any] | None,
@@ -138,9 +131,7 @@ class MCPServer:
             # Reuse the same helper used by the REST API
             from kuberca.api.routes import _build_cluster_status
 
-            status: ClusterStatus = await _build_cluster_status(
-                self._cache, namespace
-            )
+            status: ClusterStatus = await _build_cluster_status(self._cache, namespace)
             payload = dataclasses.asdict(status)
             return [TextContent(type="text", text=json.dumps(payload))]
         except Exception as exc:
@@ -148,9 +139,7 @@ class MCPServer:
             return [
                 TextContent(
                     type="text",
-                    text=json.dumps(
-                        {"isError": True, "error": "INTERNAL_ERROR", "detail": str(exc)}
-                    ),
+                    text=json.dumps({"isError": True, "error": "INTERNAL_ERROR", "detail": str(exc)}),
                 )
             ]
 
@@ -185,9 +174,7 @@ class MCPServer:
                         {
                             "isError": True,
                             "error": "INVALID_RESOURCE_FORMAT",
-                            "detail": (
-                                f"resource must be Kind/namespace/name, got: {resource!r}"
-                            ),
+                            "detail": (f"resource must be Kind/namespace/name, got: {resource!r}"),
                         }
                     ),
                 )
@@ -260,10 +247,7 @@ def _rca_response_to_dict(rca: Any) -> dict[str, Any]:
         for e in rca.evidence
     ]
 
-    affected_resources = [
-        {"kind": a.kind, "namespace": a.namespace, "name": a.name}
-        for a in rca.affected_resources
-    ]
+    affected_resources = [{"kind": a.kind, "namespace": a.namespace, "name": a.name} for a in rca.affected_resources]
 
     result: dict[str, Any] = {
         "root_cause": rca.root_cause,

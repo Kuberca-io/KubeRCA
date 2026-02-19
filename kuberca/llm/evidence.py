@@ -114,9 +114,7 @@ class EvidencePackage:
                 new_val = _truncate_value(new_val, _CHANGE_VALUE_TRUNCATE_LEN)
             old_str = old_val if old_val is not None else "(none)"
             new_str = new_val if new_val is not None else "(none)"
-            lines.append(
-                f"- [{_iso(ch.changed_at)}] {ch.field_path}: {old_str} -> {new_str}"
-            )
+            lines.append(f"- [{_iso(ch.changed_at)}] {ch.field_path}: {old_str} -> {new_str}")
         return "\n".join(lines)
 
     def _format_container_statuses(self, statuses: list[dict]) -> str:  # type: ignore[type-arg]
@@ -149,8 +147,7 @@ class EvidencePackage:
         for entry in entries[:10]:  # Max 10 entries
             status = entry.status_summary if entry.exists else "<not found>"
             lines.append(
-                f"- {entry.kind}/{entry.namespace}/{entry.name}: "
-                f"status={status}, relationship={entry.relationship}"
+                f"- {entry.kind}/{entry.namespace}/{entry.name}: status={status}, relationship={entry.relationship}"
             )
         return "\n".join(lines)
 
@@ -208,10 +205,7 @@ class EvidencePackage:
             return result
 
         # Step 3: truncate container statuses to current state only
-        stripped_statuses = [
-            {k: v for k, v in s.items() if k != "previousState"}
-            for s in self.container_statuses
-        ]
+        stripped_statuses = [{k: v for k, v in s.items() if k != "previousState"} for s in self.container_statuses]
         result = self._assemble(
             events=events,
             changes=self.changes,
@@ -259,9 +253,11 @@ class EvidencePackage:
             self._format_resource_specs(resource_specs),
         ]
         if self.state_context:
-            sections.extend([
-                "",
-                "## State Context",
-                self._format_state_context(self.state_context),
-            ])
+            sections.extend(
+                [
+                    "",
+                    "## State Context",
+                    self._format_state_context(self.state_context),
+                ]
+            )
         return "\n".join(sections)

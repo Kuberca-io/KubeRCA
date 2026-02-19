@@ -43,9 +43,7 @@ class _SchedulerPattern(StrEnum):
 
 
 # Compiled patterns for scheduler message classification (§4.5).
-_RE_INSUFFICIENT = re.compile(
-    r"Insufficient\s+(cpu|memory|ephemeral-storage)", re.IGNORECASE
-)
+_RE_INSUFFICIENT = re.compile(r"Insufficient\s+(cpu|memory|ephemeral-storage)", re.IGNORECASE)
 _RE_NODE_SELECTOR = re.compile(
     r"didn't match Pod's node affinity/selector|"
     r"node\(s\) didn't match node selector|"
@@ -225,13 +223,8 @@ class FailedSchedulingRule(Rule):
         evidence.append(
             EvidenceItem(
                 type=EvidenceType.EVENT,
-                timestamp=event.last_seen.astimezone(UTC).strftime(
-                    "%Y-%m-%dT%H:%M:%S.000Z"
-                ),
-                summary=(
-                    f"Pod {event.resource_name} failed scheduling "
-                    f"(count={event.count}): {event.message[:300]}"
-                ),
+                timestamp=event.last_seen.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                summary=(f"Pod {event.resource_name} failed scheduling (count={event.count}): {event.message[:300]}"),
             )
         )
         affected.append(
@@ -257,15 +250,11 @@ class FailedSchedulingRule(Rule):
                 break
 
         if correlation.changes:
-            latest_change: FieldChange = max(
-                correlation.changes, key=lambda fc: fc.changed_at
-            )
+            latest_change: FieldChange = max(correlation.changes, key=lambda fc: fc.changed_at)
             evidence.append(
                 EvidenceItem(
                     type=EvidenceType.CHANGE,
-                    timestamp=latest_change.changed_at.astimezone(UTC).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    ),
+                    timestamp=latest_change.changed_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     summary=(
                         f"Scheduling-related field changed: "
                         f"'{latest_change.field_path}' "
@@ -275,9 +264,7 @@ class FailedSchedulingRule(Rule):
                 )
             )
 
-        node_count = sum(
-            1 for r in correlation.related_resources if r.kind == "Node"
-        )
+        node_count = sum(1 for r in correlation.related_resources if r.kind == "Node")
         node_truncated = len(correlation.related_resources) > 0 and cache_truncated_note(
             correlation, cache_truncated=False
         )
@@ -376,19 +363,11 @@ def _build_diagnosis(
         )
 
     elif pattern == _SchedulerPattern.PVC_BINDING:
-        unbound_pvcs = [
-            r.name
-            for r in correlation.related_resources
-            if r.kind == "PersistentVolumeClaim"
-        ]
+        unbound_pvcs = [r.name for r in correlation.related_resources if r.kind == "PersistentVolumeClaim"]
         pvc_list = ", ".join(unbound_pvcs) if unbound_pvcs else "referenced PVC"
-        root_cause = (
-            f"Pod {pod} could not be scheduled: PersistentVolumeClaim "
-            f"{pvc_list} is not bound or not found."
-        )
+        root_cause = f"Pod {pod} could not be scheduled: PersistentVolumeClaim {pvc_list} is not bound or not found."
         remediation = (
-            f"Check PVC status: `kubectl get pvc -n {ns}`. "
-            f"Ensure the StorageClass exists and PV is available."
+            f"Check PVC status: `kubectl get pvc -n {ns}`. Ensure the StorageClass exists and PV is available."
         )
 
     else:
@@ -398,9 +377,6 @@ def _build_diagnosis(
             f"pattern set — diagnosis may be incomplete. "
             f"Message: {event.message[:200]}"
         )
-        remediation = (
-            f"Inspect the scheduler events for pod {pod}: "
-            f"`kubectl describe pod {pod} -n {ns}`."
-        )
+        remediation = f"Inspect the scheduler events for pod {pod}: `kubectl describe pod {pod} -n {ns}`."
 
     return root_cause, remediation

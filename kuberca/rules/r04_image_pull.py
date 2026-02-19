@@ -112,12 +112,9 @@ class ImagePullRule(Rule):
         evidence: list[EvidenceItem] = [
             EvidenceItem(
                 type=EvidenceType.EVENT,
-                timestamp=event.last_seen.astimezone(UTC).strftime(
-                    "%Y-%m-%dT%H:%M:%S.000Z"
-                ),
+                timestamp=event.last_seen.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 summary=(
-                    f"Pod {event.resource_name} failed to pull image "
-                    f"(count={event.count}): {event.message[:300]}"
+                    f"Pod {event.resource_name} failed to pull image (count={event.count}): {event.message[:300]}"
                 ),
             )
         ]
@@ -129,22 +126,16 @@ class ImagePullRule(Rule):
             )
         ]
 
-        deploy: CachedResourceView | None = (
-            correlation.related_resources[0] if correlation.related_resources else None
-        )
+        deploy: CachedResourceView | None = correlation.related_resources[0] if correlation.related_resources else None
         if deploy:
-            affected.append(
-                AffectedResource(kind="Deployment", namespace=deploy.namespace, name=deploy.name)
-            )
+            affected.append(AffectedResource(kind="Deployment", namespace=deploy.namespace, name=deploy.name))
 
         if correlation.changes:
             latest: FieldChange = max(correlation.changes, key=lambda fc: fc.changed_at)
             evidence.append(
                 EvidenceItem(
                     type=EvidenceType.CHANGE,
-                    timestamp=latest.changed_at.astimezone(UTC).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    ),
+                    timestamp=latest.changed_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     summary=(
                         f"Image/secret field changed on "
                         f"{deploy.name if deploy else 'deployment'}: "

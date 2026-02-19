@@ -89,11 +89,11 @@ def _diff_configmaps(
     """
     changes: list[FieldChange] = []
     try:
-        containers = (
-            deployment.spec.get("template", {})
-            .get("spec", {})
-            .get("containers", [])
-        )
+        raw_template = deployment.spec.get("template", {})
+        template: dict[str, object] = raw_template if isinstance(raw_template, dict) else {}
+        raw_spec = template.get("spec", {})
+        spec_dict: dict[str, object] = raw_spec if isinstance(raw_spec, dict) else {}
+        containers = spec_dict.get("containers", [])
         if not isinstance(containers, list):
             return changes
 
@@ -198,13 +198,8 @@ class CrashLoopRule(Rule):
         evidence.append(
             EvidenceItem(
                 type=EvidenceType.EVENT,
-                timestamp=event.last_seen.astimezone(UTC).strftime(
-                    "%Y-%m-%dT%H:%M:%S.000Z"
-                ),
-                summary=(
-                    f"Pod {event.resource_name} is in CrashLoopBackOff "
-                    f"(count={event.count}): {event.message}"
-                ),
+                timestamp=event.last_seen.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                summary=(f"Pod {event.resource_name} is in CrashLoopBackOff (count={event.count}): {event.message}"),
             )
         )
         affected.append(
@@ -215,9 +210,7 @@ class CrashLoopRule(Rule):
             )
         )
 
-        deploy: CachedResourceView | None = (
-            correlation.related_resources[0] if correlation.related_resources else None
-        )
+        deploy: CachedResourceView | None = correlation.related_resources[0] if correlation.related_resources else None
         if deploy:
             affected.append(
                 AffectedResource(
@@ -229,15 +222,11 @@ class CrashLoopRule(Rule):
 
         if correlation.changes:
             # Classify the most recent change for the root-cause message.
-            latest_change: FieldChange = max(
-                correlation.changes, key=lambda fc: fc.changed_at
-            )
+            latest_change: FieldChange = max(correlation.changes, key=lambda fc: fc.changed_at)
             evidence.append(
                 EvidenceItem(
                     type=EvidenceType.CHANGE,
-                    timestamp=latest_change.changed_at.astimezone(UTC).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    ),
+                    timestamp=latest_change.changed_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     summary=_change_summary(latest_change, deploy),
                 )
             )

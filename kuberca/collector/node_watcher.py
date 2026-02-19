@@ -34,9 +34,7 @@ EventHandler = Callable[[EventRecord], Coroutine[Any, Any, None]]
 
 # Condition types we monitor.  For "Ready" we invert the polarity: a Ready
 # condition with status!=True means the node is NotReady.
-_WATCHED_CONDITIONS: frozenset[str] = frozenset(
-    {"Ready", "MemoryPressure", "DiskPressure", "PIDPressure"}
-)
+_WATCHED_CONDITIONS: frozenset[str] = frozenset({"Ready", "MemoryPressure", "DiskPressure", "PIDPressure"})
 
 _CONDITION_SEVERITY: dict[str, Severity] = {
     "NotReady": Severity.CRITICAL,
@@ -90,7 +88,7 @@ class NodeWatcher(BaseWatcher):
 
     def _list_func(self) -> Callable[..., Coroutine[Any, Any, Any]]:
         """Use the node list endpoint (nodes are cluster-scoped)."""
-        return self._api.list_node  # type: ignore[return-value]
+        return self._api.list_node  # type: ignore[no-any-return]
 
     async def _handle_event(self, event_type: str, obj: Any, raw: dict[str, Any]) -> None:
         """Process a node watch event for condition changes."""

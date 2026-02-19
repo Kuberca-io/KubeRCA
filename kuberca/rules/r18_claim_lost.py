@@ -60,8 +60,10 @@ class ClaimLostRule(Rule):
 
         duration_ms = (time.monotonic() - t_start) * 1000.0
         return CorrelationResult(
-            changes=[], related_resources=related_resources,
-            objects_queried=objects_queried, duration_ms=duration_ms,
+            changes=[],
+            related_resources=related_resources,
+            objects_queried=objects_queried,
+            duration_ms=duration_ms,
         )
 
     def explain(self, event: EventRecord, correlation: CorrelationResult) -> RuleResult:
@@ -75,11 +77,13 @@ class ClaimLostRule(Rule):
                 summary=f"PV/PVC lost event (count={event.count}): {event.message[:300]}",
             )
         ]
-        affected = [
-            AffectedResource(kind=event.resource_kind, namespace=event.namespace, name=event.resource_name)
-        ]
+        affected = [AffectedResource(kind=event.resource_kind, namespace=event.namespace, name=event.resource_name)]
 
-        lost_pvs = [r.name for r in correlation.related_resources if r.kind == "PersistentVolume" and r.status.get("phase") in ("Lost", "Failed")]
+        lost_pvs = [
+            r.name
+            for r in correlation.related_resources
+            if r.kind == "PersistentVolume" and r.status.get("phase") in ("Lost", "Failed")
+        ]
         for pv_name in lost_pvs:
             affected.append(AffectedResource(kind="PersistentVolume", namespace="", name=pv_name))
 
@@ -97,6 +101,10 @@ class ClaimLostRule(Rule):
         _logger.info("r18_match", resource=event.resource_name, namespace=event.namespace, confidence=confidence)
 
         return RuleResult(
-            rule_id=self.rule_id, root_cause=root_cause, confidence=confidence,
-            evidence=evidence, affected_resources=affected, suggested_remediation=remediation,
+            rule_id=self.rule_id,
+            root_cause=root_cause,
+            confidence=confidence,
+            evidence=evidence,
+            affected_resources=affected,
+            suggested_remediation=remediation,
         )

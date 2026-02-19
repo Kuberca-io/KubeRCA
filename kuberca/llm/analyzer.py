@@ -148,15 +148,11 @@ class LLMAnalyzer:
             body = response.json()
             models = body.get("models", [])
             model_names: list[str] = [
-                m.get("name", "") if isinstance(m, dict) else ""
-                for m in (models if isinstance(models, list) else [])
+                m.get("name", "") if isinstance(m, dict) else "" for m in (models if isinstance(models, list) else [])
             ]
             # Check if configured model is present (may be with or without tag suffix)
             configured = self._config.model
-            loaded = any(
-                name == configured or name.startswith(configured.split(":")[0])
-                for name in model_names
-            )
+            loaded = any(name == configured or name.startswith(configured.split(":")[0]) for name in model_names)
             self._available = loaded
             llm_available.set(1.0 if loaded else 0.0)
             if not loaded:

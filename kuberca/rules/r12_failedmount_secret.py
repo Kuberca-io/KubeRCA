@@ -12,7 +12,6 @@ from datetime import UTC
 
 from kuberca.models.analysis import AffectedResource, CorrelationResult, EvidenceItem, RuleResult
 from kuberca.models.events import EventRecord, EvidenceType
-from kuberca.models.resources import FieldChange
 from kuberca.observability.logging import get_logger
 from kuberca.observability.metrics import rule_matches_total
 from kuberca.rules.base import ChangeLedger, ResourceCache, Rule
@@ -97,6 +96,10 @@ class FailedMountSecretRule(Rule):
         _logger.info("r12_match", pod=event.resource_name, namespace=event.namespace, confidence=confidence)
 
         return RuleResult(
-            rule_id=self.rule_id, root_cause=root_cause, confidence=confidence,
-            evidence=evidence, affected_resources=affected, suggested_remediation=remediation,
+            rule_id=self.rule_id,
+            root_cause=root_cause,
+            confidence=confidence,
+            evidence=evidence,
+            affected_resources=affected,
+            suggested_remediation=remediation,
         )

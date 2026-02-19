@@ -26,12 +26,14 @@ from kuberca.rules.confidence import compute_confidence
 
 _logger = get_logger("rule.r07_config_drift")
 
-_CONFIG_DRIFT_REASONS = frozenset({
-    "BackOff",
-    "Failed",
-    "FailedMount",
-    "Unhealthy",
-})
+_CONFIG_DRIFT_REASONS = frozenset(
+    {
+        "BackOff",
+        "Failed",
+        "FailedMount",
+        "Unhealthy",
+    }
+)
 
 _RE_CONFIG_MENTION = re.compile(
     r"configmap|config map|secret|configuration",
@@ -98,16 +100,16 @@ class ConfigDriftRule(Rule):
         if deployment is not None:
             related_resources.append(deployment)
             try:
-                containers = (
-                    deployment.spec.get("template", {})
-                    .get("spec", {})
-                    .get("containers", [])
-                )
+                raw_template = deployment.spec.get("template", {})
+                template: dict[str, object] = raw_template if isinstance(raw_template, dict) else {}
+                raw_spec_val = template.get("spec", {})
+                spec_inner: dict[str, object] = raw_spec_val if isinstance(raw_spec_val, dict) else {}
+                containers = spec_inner.get("containers", [])
                 if isinstance(containers, list):
                     for container in containers:
                         if not isinstance(container, dict):
                             continue
-                        for env_source in (container.get("envFrom") or []):
+                        for env_source in container.get("envFrom") or []:
                             if not isinstance(env_source, dict):
                                 continue
                             cm_ref = env_source.get("configMapRef", {})
@@ -118,9 +120,7 @@ class ConfigDriftRule(Rule):
                                     objects_queried += 1
                                     if cm is not None:
                                         related_resources.append(cm)
-                                    raw = ledger.diff(
-                                        "ConfigMap", event.namespace, cm_name, since_hours=2.0
-                                    )
+                                    raw = ledger.diff("ConfigMap", event.namespace, cm_name, since_hours=2.0)
                                     objects_queried += 1
                                     for fc in raw:
                                         if _is_config_change(fc):
@@ -149,9 +149,7 @@ class ConfigDriftRule(Rule):
         evidence: list[EvidenceItem] = [
             EvidenceItem(
                 type=EvidenceType.EVENT,
-                timestamp=event.last_seen.astimezone(UTC).strftime(
-                    "%Y-%m-%dT%H:%M:%S.000Z"
-                ),
+                timestamp=event.last_seen.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 summary=(
                     f"Pod {event.resource_name} failed with config-related message "
                     f"(count={event.count}): {event.message[:300]}"
@@ -170,18 +168,14 @@ class ConfigDriftRule(Rule):
         for res in correlation.related_resources:
             if res.kind == "Deployment":
                 deploy = res
-                affected.append(
-                    AffectedResource(kind="Deployment", namespace=res.namespace, name=res.name)
-                )
+                affected.append(AffectedResource(kind="Deployment", namespace=res.namespace, name=res.name))
 
         if correlation.changes:
             latest: FieldChange = max(correlation.changes, key=lambda fc: fc.changed_at)
             evidence.append(
                 EvidenceItem(
                     type=EvidenceType.CHANGE,
-                    timestamp=latest.changed_at.astimezone(UTC).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    ),
+                    timestamp=latest.changed_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     summary=(
                         f"ConfigMap/Secret change detected: '{latest.field_path}' "
                         f"{latest.old_value!r} → {latest.new_value!r}"

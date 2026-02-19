@@ -40,8 +40,8 @@ _log = get_logger("change_ledger")
 # Memory tier constants (bytes)
 # ---------------------------------------------------------------------------
 
-_SOFT_LIMIT_BYTES: Final[int] = 150 * 1024 * 1024   # 150 MB
-_HARD_LIMIT_BYTES: Final[int] = 200 * 1024 * 1024   # 200 MB
+_SOFT_LIMIT_BYTES: Final[int] = 150 * 1024 * 1024  # 150 MB
+_HARD_LIMIT_BYTES: Final[int] = 200 * 1024 * 1024  # 200 MB
 _FAILSAFE_LIMIT_BYTES: Final[int] = 300 * 1024 * 1024  # 300 MB
 
 _FAILSAFE_AGE_CUTOFF: Final[timedelta] = timedelta(hours=1)

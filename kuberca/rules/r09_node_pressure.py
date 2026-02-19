@@ -24,15 +24,17 @@ from kuberca.rules.confidence import compute_confidence
 
 _logger = get_logger("rule.r09_node_pressure")
 
-_PRESSURE_REASONS = frozenset({
-    "NodeHasInsufficientMemory",
-    "NodeHasInsufficientDisk",
-    "NodeHasDiskPressure",
-    "NodeHasMemoryPressure",
-    "MemoryPressure",
-    "DiskPressure",
-    "PIDPressure",
-})
+_PRESSURE_REASONS = frozenset(
+    {
+        "NodeHasInsufficientMemory",
+        "NodeHasInsufficientDisk",
+        "NodeHasDiskPressure",
+        "NodeHasMemoryPressure",
+        "MemoryPressure",
+        "DiskPressure",
+        "PIDPressure",
+    }
+)
 
 
 def _is_pressure_relevant(fc: FieldChange) -> bool:
@@ -95,10 +97,7 @@ class NodePressureRule(Rule):
         # List pods on this node as context.
         all_pods = cache.list("Pod", event.namespace)
         objects_queried += len(all_pods)
-        node_pods = [
-            p for p in all_pods
-            if p.spec.get("nodeName") == event.resource_name
-        ]
+        node_pods = [p for p in all_pods if p.spec.get("nodeName") == event.resource_name]
         related_resources.extend(node_pods[:10])
 
         duration_ms = (time.monotonic() - t_start) * 1000.0
@@ -123,12 +122,9 @@ class NodePressureRule(Rule):
         evidence: list[EvidenceItem] = [
             EvidenceItem(
                 type=EvidenceType.EVENT,
-                timestamp=event.last_seen.astimezone(UTC).strftime(
-                    "%Y-%m-%dT%H:%M:%S.000Z"
-                ),
+                timestamp=event.last_seen.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 summary=(
-                    f"Node {event.resource_name} has {pressure} pressure "
-                    f"(count={event.count}): {event.message[:300]}"
+                    f"Node {event.resource_name} has {pressure} pressure (count={event.count}): {event.message[:300]}"
                 ),
             )
         ]
@@ -147,12 +143,9 @@ class NodePressureRule(Rule):
             evidence.append(
                 EvidenceItem(
                     type=EvidenceType.CHANGE,
-                    timestamp=latest.changed_at.astimezone(UTC).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    ),
+                    timestamp=latest.changed_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     summary=(
-                        f"Node condition changed: '{latest.field_path}' "
-                        f"{latest.old_value!r} → {latest.new_value!r}"
+                        f"Node condition changed: '{latest.field_path}' {latest.old_value!r} → {latest.new_value!r}"
                     ),
                 )
             )

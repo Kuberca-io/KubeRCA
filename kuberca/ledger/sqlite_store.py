@@ -70,7 +70,7 @@ CREATE INDEX IF NOT EXISTS idx_snapshots_time
     ON snapshots (captured_at);
 """
 
-_FLUSH_INTERVAL_SECONDS: Final[float] = 0.5   # 500 ms batch flush
+_FLUSH_INTERVAL_SECONDS: Final[float] = 0.5  # 500 ms batch flush
 _CLEANUP_INTERVAL_SECONDS: Final[float] = 300.0  # 5 minutes
 _BACKPRESSURE_THRESHOLD_MS: Final[float] = 50.0  # 50 ms write latency
 

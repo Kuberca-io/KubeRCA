@@ -67,8 +67,7 @@ def _rca_to_schema(rca: RCAResponse) -> RCAResponseSchema:
     ]
 
     affected = [
-        AffectedResourceResponse(kind=a.kind, namespace=a.namespace, name=a.name)
-        for a in rca.affected_resources
+        AffectedResourceResponse(kind=a.kind, namespace=a.namespace, name=a.name) for a in rca.affected_resources
     ]
 
     meta: ResponseMetaResponse | None = None
@@ -86,8 +85,7 @@ def _rca_to_schema(rca: RCAResponse) -> RCAResponseSchema:
     blast_radius = None
     if rca.blast_radius:
         blast_radius = [
-            AffectedResourceResponse(kind=a.kind, namespace=a.namespace, name=a.name)
-            for a in rca.blast_radius
+            AffectedResourceResponse(kind=a.kind, namespace=a.namespace, name=a.name) for a in rca.blast_radius
         ]
 
     return RCAResponseSchema(
@@ -261,9 +259,9 @@ async def get_status(
 
         # Collect rule engine coverage from Prometheus gauges
         coverage = RuleEngineCoverage(
-            hit_rate=rule_engine_hit_rate._value.get(),  # type: ignore[union-attr]
-            escalation_rate=llm_escalation_rate._value.get(),  # type: ignore[union-attr]
-            inconclusive_rate=inconclusive_rate._value.get(),  # type: ignore[union-attr]
+            hit_rate=rule_engine_hit_rate._value.get(),
+            escalation_rate=llm_escalation_rate._value.get(),
+            inconclusive_rate=inconclusive_rate._value.get(),
             total_rules=_get_registered_rule_count(request),
             top_rules_matched=_get_top_rules_matched(),
         )
@@ -324,10 +322,7 @@ async def post_analyze(
                     status_code=404,
                     content=ErrorResponse(
                         error="RESOURCE_NOT_FOUND",
-                        detail=(
-                            f"{resource_kind} '{resource_name}' not found "
-                            f"in namespace '{namespace}'"
-                        ),
+                        detail=(f"{resource_kind} '{resource_name}' not found in namespace '{namespace}'"),
                     ).model_dump(),
                 )
         except Exception as exc:  # noqa: BLE001

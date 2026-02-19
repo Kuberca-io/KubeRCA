@@ -33,9 +33,7 @@ class EvictedRule(Rule):
     def match(self, event: EventRecord) -> bool:
         if event.reason == "Evicted":
             return True
-        if event.reason in ("Killing", "Preempting") and "evict" in event.message.lower():
-            return True
-        return False
+        return event.reason in ("Killing", "Preempting") and "evict" in event.message.lower()
 
     def correlate(self, event: EventRecord, cache: ResourceCache, ledger: ChangeLedger) -> CorrelationResult:
         t_start = time.monotonic()
@@ -58,8 +56,10 @@ class EvictedRule(Rule):
 
         duration_ms = (time.monotonic() - t_start) * 1000.0
         return CorrelationResult(
-            changes=[], related_resources=related_resources,
-            objects_queried=objects_queried, duration_ms=duration_ms,
+            changes=[],
+            related_resources=related_resources,
+            objects_queried=objects_queried,
+            duration_ms=duration_ms,
         )
 
     def explain(self, event: EventRecord, correlation: CorrelationResult) -> RuleResult:
@@ -107,6 +107,10 @@ class EvictedRule(Rule):
         _logger.info("r17_match", pod=event.resource_name, namespace=event.namespace, confidence=confidence)
 
         return RuleResult(
-            rule_id=self.rule_id, root_cause=root_cause, confidence=confidence,
-            evidence=evidence, affected_resources=affected, suggested_remediation=remediation,
+            rule_id=self.rule_id,
+            root_cause=root_cause,
+            confidence=confidence,
+            evidence=evidence,
+            affected_resources=affected,
+            suggested_remediation=remediation,
         )

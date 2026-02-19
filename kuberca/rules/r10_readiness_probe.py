@@ -58,11 +58,11 @@ def _find_owning_deployment(
 def _probe_details(deployment: CachedResourceView) -> str:
     """Extract probe configuration summary from deployment spec."""
     try:
-        containers = (
-            deployment.spec.get("template", {})
-            .get("spec", {})
-            .get("containers", [])
-        )
+        raw_template = deployment.spec.get("template", {})
+        template: dict[str, object] = raw_template if isinstance(raw_template, dict) else {}
+        raw_spec = template.get("spec", {})
+        spec_dict: dict[str, object] = raw_spec if isinstance(raw_spec, dict) else {}
+        containers = spec_dict.get("containers", [])
         if isinstance(containers, list) and containers:
             raw_first = containers[0]
             if not isinstance(raw_first, dict):
@@ -151,12 +151,9 @@ class ReadinessProbeRule(Rule):
         evidence: list[EvidenceItem] = [
             EvidenceItem(
                 type=EvidenceType.EVENT,
-                timestamp=event.last_seen.astimezone(UTC).strftime(
-                    "%Y-%m-%dT%H:%M:%S.000Z"
-                ),
+                timestamp=event.last_seen.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 summary=(
-                    f"Pod {event.resource_name} readiness probe failing "
-                    f"(count={event.count}): {event.message[:300]}"
+                    f"Pod {event.resource_name} readiness probe failing (count={event.count}): {event.message[:300]}"
                 ),
             )
         ]
@@ -168,22 +165,16 @@ class ReadinessProbeRule(Rule):
             )
         ]
 
-        deploy: CachedResourceView | None = (
-            correlation.related_resources[0] if correlation.related_resources else None
-        )
+        deploy: CachedResourceView | None = correlation.related_resources[0] if correlation.related_resources else None
         if deploy:
-            affected.append(
-                AffectedResource(kind="Deployment", namespace=deploy.namespace, name=deploy.name)
-            )
+            affected.append(AffectedResource(kind="Deployment", namespace=deploy.namespace, name=deploy.name))
 
         if correlation.changes:
             latest: FieldChange = max(correlation.changes, key=lambda fc: fc.changed_at)
             evidence.append(
                 EvidenceItem(
                     type=EvidenceType.CHANGE,
-                    timestamp=latest.changed_at.astimezone(UTC).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    ),
+                    timestamp=latest.changed_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     summary=(
                         f"Readiness probe config changed: '{latest.field_path}' "
                         f"{latest.old_value!r} → {latest.new_value!r}"

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import logging
 import sys
+from typing import cast
 
 import structlog
+from structlog.typing import FilteringBoundLogger
 
 
 def setup_logging(level: str = "info") -> None:
@@ -28,6 +30,6 @@ def setup_logging(level: str = "info") -> None:
     )
 
 
-def get_logger(component: str) -> structlog.stdlib.BoundLogger:
+def get_logger(component: str) -> FilteringBoundLogger:
     """Get a logger bound with a component name."""
-    return structlog.get_logger(component=component)  # type: ignore[return-value]
+    return cast(FilteringBoundLogger, structlog.get_logger(component=component))

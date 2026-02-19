@@ -65,7 +65,9 @@ class RateOfChangeRule:
     delta_threshold: int  # Minimum increase in count to trigger
     observation_window: timedelta = field(default_factory=lambda: timedelta(minutes=5))
     min_severity: Severity = Severity.WARNING
-    summary_template: str = "Rapid escalation: {reason} on {resource_kind}/{namespace}/{name} ({delta} new occurrences in {window})"
+    summary_template: str = (
+        "Rapid escalation: {reason} on {resource_kind}/{namespace}/{name} ({delta} new occurrences in {window})"
+    )
 
 
 @dataclass
@@ -395,8 +397,7 @@ _DEFAULT_RATE_RULES: tuple[RateOfChangeRule, ...] = (
         observation_window=timedelta(minutes=5),
         min_severity=Severity.WARNING,
         summary_template=(
-            "Rapid CrashLoop escalation: {resource_kind}/{namespace}/{name} "
-            "+{delta} back-offs in {window}"
+            "Rapid CrashLoop escalation: {resource_kind}/{namespace}/{name} +{delta} back-offs in {window}"
         ),
     ),
     RateOfChangeRule(
@@ -404,10 +405,7 @@ _DEFAULT_RATE_RULES: tuple[RateOfChangeRule, ...] = (
         delta_threshold=3,
         observation_window=timedelta(minutes=10),
         min_severity=Severity.WARNING,
-        summary_template=(
-            "Rapid OOM escalation: {resource_kind}/{namespace}/{name} "
-            "+{delta} OOM kills in {window}"
-        ),
+        summary_template=("Rapid OOM escalation: {resource_kind}/{namespace}/{name} +{delta} OOM kills in {window}"),
     ),
     RateOfChangeRule(
         reason="FailedScheduling",
@@ -415,8 +413,7 @@ _DEFAULT_RATE_RULES: tuple[RateOfChangeRule, ...] = (
         observation_window=timedelta(minutes=5),
         min_severity=Severity.WARNING,
         summary_template=(
-            "Rapid scheduling failures: {resource_kind}/{namespace}/{name} "
-            "+{delta} failures in {window}"
+            "Rapid scheduling failures: {resource_kind}/{namespace}/{name} +{delta} failures in {window}"
         ),
     ),
 )

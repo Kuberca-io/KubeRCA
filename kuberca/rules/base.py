@@ -7,6 +7,7 @@ rule registration, priority ordering, and bounded evaluation with the
 
 from __future__ import annotations
 
+import builtins
 import threading
 import time
 from abc import ABC, abstractmethod
@@ -32,11 +33,11 @@ class ResourceCache(Protocol):
 
     def get(self, kind: str, namespace: str, name: str) -> CachedResourceView | None: ...
 
-    def list(self, kind: str, namespace: str = "") -> list[CachedResourceView]: ...
+    def list(self, kind: str, namespace: str = "") -> builtins.list[CachedResourceView]: ...
 
     def list_by_label(
         self, kind: str, labels: dict[str, str], namespace: str = ""
-    ) -> list[CachedResourceView]: ...
+    ) -> builtins.list[CachedResourceView]: ...
 
     def list_truncated(self, kind: str) -> bool: ...
 
@@ -196,9 +197,7 @@ class RuleEngine:
             corr, timed_out, obj_cap_hit = self._run_correlate(rule, event)
 
             if timed_out:
-                meta.warnings.append(
-                    f"{rule.rule_id} timed out after {_CORRELATE_TIMEOUT_MS:.0f}ms"
-                )
+                meta.warnings.append(f"{rule.rule_id} timed out after {_CORRELATE_TIMEOUT_MS:.0f}ms")
                 _logger.warning(
                     "rule_correlate_timeout",
                     rule_id=rule.rule_id,
@@ -207,9 +206,7 @@ class RuleEngine:
                 continue
 
             if obj_cap_hit:
-                meta.warnings.append(
-                    f"{rule.rule_id} hit object cap ({corr.objects_queried}/{_MAX_OBJECTS})"
-                )
+                meta.warnings.append(f"{rule.rule_id} hit object cap ({corr.objects_queried}/{_MAX_OBJECTS})")
 
             # Phase 3: explain
             try:

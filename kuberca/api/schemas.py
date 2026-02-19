@@ -46,10 +46,7 @@ class AnalyzeRequest(BaseModel):
 
     resource: str = Field(
         ...,
-        description=(
-            "Kubernetes resource in ``kind/namespace/name`` format, "
-            "e.g. ``Pod/default/my-pod``."
-        ),
+        description=("Kubernetes resource in ``kind/namespace/name`` format, e.g. ``Pod/default/my-pod``."),
         examples=["Pod/default/my-pod", "Deployment/production/api-server"],
     )
     time_window: str | None = Field(
@@ -68,10 +65,7 @@ class AnalyzeRequest(BaseModel):
         """Ensure resource is ``Kind/namespace/name``."""
         parts = value.split("/")
         if len(parts) != 3 or not all(parts):
-            raise ValueError(
-                "resource must be in Kind/namespace/name format, "
-                f"got: {value!r}"
-            )
+            raise ValueError(f"resource must be in Kind/namespace/name format, got: {value!r}")
         return value
 
     @field_validator("time_window")
@@ -83,10 +77,7 @@ class AnalyzeRequest(BaseModel):
         import re
 
         if not re.match(r"^\d+(m|h|d)$", value):
-            raise ValueError(
-                "time_window must be a positive integer followed by m, h, or d, "
-                f"got: {value!r}"
-            )
+            raise ValueError(f"time_window must be a positive integer followed by m, h, or d, got: {value!r}")
         return value
 
 

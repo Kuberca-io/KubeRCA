@@ -26,18 +26,20 @@ from kuberca.rules.confidence import compute_confidence
 _logger = get_logger("rule.r05_hpa")
 
 # HPA scaling-failure event reasons emitted by the HPA controller.
-_HPA_FAILURE_REASONS = frozenset({
-    "FailedScale",
-    "DesiredReplicasComputed",
-    "FailedGetScale",
-    "FailedComputeMetricsReplicas",
-    "FailedGetResourceMetric",
-    "FailedGetExternalMetric",
-    "FailedGetPodsMetric",
-    "FailedGetContainerResource",
-    "FailedGetObjectMetric",
-    "BackoffLimitExceeded",
-})
+_HPA_FAILURE_REASONS = frozenset(
+    {
+        "FailedScale",
+        "DesiredReplicasComputed",
+        "FailedGetScale",
+        "FailedComputeMetricsReplicas",
+        "FailedGetResourceMetric",
+        "FailedGetExternalMetric",
+        "FailedGetPodsMetric",
+        "FailedGetContainerResource",
+        "FailedGetObjectMetric",
+        "BackoffLimitExceeded",
+    }
+)
 
 _RE_HPA_FAIL = re.compile(
     r"failed.*(scale|metric|replicas|compute)",
@@ -89,20 +91,14 @@ class HPARule(Rule):
 
         if hpa is not None:
             related_resources.append(hpa)
-            raw = ledger.diff(
-                "HorizontalPodAutoscaler", event.namespace, hpa_name, since_hours=2.0
-            )
+            raw = ledger.diff("HorizontalPodAutoscaler", event.namespace, hpa_name, since_hours=2.0)
             objects_queried += 1
             for fc in raw:
                 if _is_hpa_relevant(fc):
                     relevant_changes.append(fc)
 
             # Also diff the scaled Deployment if identifiable.
-            scale_target = (
-                hpa.spec.get("scaleTargetRef", {})
-                if isinstance(hpa.spec, dict)
-                else {}
-            )
+            scale_target = hpa.spec.get("scaleTargetRef", {}) if isinstance(hpa.spec, dict) else {}
             if isinstance(scale_target, dict):
                 target_name = scale_target.get("name")
                 target_kind = scale_target.get("kind", "Deployment")
@@ -133,13 +129,8 @@ class HPARule(Rule):
         evidence: list[EvidenceItem] = [
             EvidenceItem(
                 type=EvidenceType.EVENT,
-                timestamp=event.last_seen.astimezone(UTC).strftime(
-                    "%Y-%m-%dT%H:%M:%S.000Z"
-                ),
-                summary=(
-                    f"HPA {event.resource_name} scaling failure "
-                    f"(count={event.count}): {event.message[:300]}"
-                ),
+                timestamp=event.last_seen.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                summary=(f"HPA {event.resource_name} scaling failure (count={event.count}): {event.message[:300]}"),
             )
         ]
         affected: list[AffectedResource] = [
@@ -152,22 +143,15 @@ class HPARule(Rule):
 
         for res in correlation.related_resources:
             if res.kind != event.resource_kind or res.name != event.resource_name:
-                affected.append(
-                    AffectedResource(kind=res.kind, namespace=res.namespace, name=res.name)
-                )
+                affected.append(AffectedResource(kind=res.kind, namespace=res.namespace, name=res.name))
 
         if correlation.changes:
             latest: FieldChange = max(correlation.changes, key=lambda fc: fc.changed_at)
             evidence.append(
                 EvidenceItem(
                     type=EvidenceType.CHANGE,
-                    timestamp=latest.changed_at.astimezone(UTC).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    ),
-                    summary=(
-                        f"HPA spec changed: '{latest.field_path}' "
-                        f"{latest.old_value!r} → {latest.new_value!r}"
-                    ),
+                    timestamp=latest.changed_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                    summary=(f"HPA spec changed: '{latest.field_path}' {latest.old_value!r} → {latest.new_value!r}"),
                 )
             )
             root_cause = (

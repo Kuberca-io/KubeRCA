@@ -104,7 +104,7 @@ class PodWatcher(BaseWatcher):
 
     def _list_func(self) -> Callable[..., Coroutine[Any, Any, Any]]:
         """Use the cluster-wide pod list endpoint."""
-        return self._api.list_pod_for_all_namespaces  # type: ignore[return-value]
+        return self._api.list_pod_for_all_namespaces  # type: ignore[no-any-return]
 
     async def _handle_event(self, event_type: str, obj: Any, raw: dict[str, Any]) -> None:
         """Process a pod watch event for phase transitions and spec changes."""

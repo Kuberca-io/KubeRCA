@@ -21,7 +21,18 @@ from kuberca.models.config import KubeRCAConfig
 from kuberca.observability.logging import get_logger, setup_logging
 
 if TYPE_CHECKING:
-    import structlog
+    from structlog.typing import FilteringBoundLogger
+
+    from kuberca.analyst.coordinator import AnalystCoordinator
+    from kuberca.analyst.queue import WorkQueue
+    from kuberca.cache.resource_cache import ResourceCache
+    from kuberca.collector.event_watcher import EventWatcher
+    from kuberca.graph.dependency_graph import DependencyGraph
+    from kuberca.ledger.change_ledger import ChangeLedger
+    from kuberca.llm.analyzer import LLMAnalyzer
+    from kuberca.notifications.manager import NotificationDispatcher
+    from kuberca.rules.base import RuleEngine
+    from kuberca.scout.detector import AnomalyDetector
 
 _SHUTDOWN_GRACE_SECONDS = 15
 
@@ -45,28 +56,28 @@ class KubeRCAApp:
     def __init__(self) -> None:
         self.config: KubeRCAConfig | None = None
 
-        # Component handles — typed as object so we can reference them without
-        # importing the (not-yet-implemented) concrete types at module level.
-        # The start() method populates every slot before moving to the next.
-        self._k8s_client: object | None = None
-        self._cache: object | None = None
-        self._ledger: object | None = None
-        self._collector: object | None = None
-        self._rule_engine: object | None = None
-        self._llm_analyzer: object | None = None
-        self._coordinator: object | None = None
-        self._analysis_queue: object | None = None
-        self._scout: object | None = None
-        self._notifications: object | None = None
+        # Component handles — populated by start() in dependency order.
+        # Typed as concrete types (imported under TYPE_CHECKING) so that
+        # attribute access is checked by mypy without circular runtime imports.
+        self._k8s_client: bool | None = None
+        self._cache: ResourceCache | None = None
+        self._ledger: ChangeLedger | None = None
+        self._collector: EventWatcher | None = None
+        self._rule_engine: RuleEngine | None = None
+        self._llm_analyzer: LLMAnalyzer | None = None
+        self._coordinator: AnalystCoordinator | None = None
+        self._analysis_queue: WorkQueue | None = None
+        self._scout: AnomalyDetector | None = None
+        self._notifications: NotificationDispatcher | None = None
         self._mcp_server: object | None = None
         self._rest_server: object | None = None
-        self._dependency_graph: object | None = None
+        self._dependency_graph: DependencyGraph | None = None
 
         # Background tasks that must be cancelled on shutdown
         self._background_tasks: list[asyncio.Task[None]] = []
 
         self._running = False
-        self._log: structlog.stdlib.BoundLogger | None = None
+        self._log: FilteringBoundLogger | None = None
 
     # ------------------------------------------------------------------
     # Startup
@@ -143,11 +154,11 @@ class KubeRCAApp:
         try:
             # Import lazily — this module pulls in kubernetes-asyncio which
             # attempts cluster auto-detection on import in some versions.
-            import kubernetes_asyncio.config as k8s_config  # type: ignore[import-untyped]
+            import kubernetes_asyncio.config as k8s_config
 
             try:
                 # load_incluster_config() is synchronous in kubernetes-asyncio
-                k8s_config.load_incluster_config()
+                k8s_config.load_incluster_config()  # type: ignore[no-untyped-call]
                 self._log.info("k8s client configured from in-cluster service account")
             except k8s_config.ConfigException:
                 # load_kube_config() is async in kubernetes-asyncio
@@ -165,9 +176,9 @@ class KubeRCAApp:
         assert self.config is not None
         self._log.debug("starting resource cache")
         try:
-            from kubernetes_asyncio import client as k8s_client  # type: ignore[import-untyped]
+            from kubernetes_asyncio import client as k8s_client
 
-            from kuberca.cache import ResourceCache  # type: ignore[attr-defined]
+            from kuberca.cache import ResourceCache
 
             cache = ResourceCache()
             v1 = k8s_client.CoreV1Api()
@@ -230,7 +241,7 @@ class KubeRCAApp:
 
     def _seed_graph_from_cache(
         self,
-        graph: object,
+        graph: DependencyGraph,
         resource_snapshot_cls: type,
     ) -> None:
         """Iterate the cache store and add every entry to the graph."""
@@ -238,9 +249,9 @@ class KubeRCAApp:
 
         cache = self._cache
         store = cache._store  # type: ignore[union-attr]
-        for kind, ns_map in store.items():
-            for ns, name_map in ns_map.items():
-                for name, cached in name_map.items():
+        for _kind, ns_map in store.items():
+            for _ns, name_map in ns_map.items():
+                for _name, cached in name_map.items():
                     raw_obj = {
                         "metadata": {
                             "namespace": cached.namespace,
@@ -261,7 +272,7 @@ class KubeRCAApp:
                         captured_at=datetime.now(tz=UTC),
                         resource_version=cached.resource_version,
                     )
-                    graph.add_resource(snapshot)  # type: ignore[union-attr]
+                    graph.add_resource(snapshot)
 
     async def _start_ledger(self) -> None:
         """Initialise ChangeLedger (optionally backed by SQLite)."""
@@ -297,7 +308,7 @@ class KubeRCAApp:
         assert self.config is not None
         self._log.debug("starting event collector")
         try:
-            from kubernetes_asyncio import client as k8s_client  # type: ignore[import-untyped]
+            from kubernetes_asyncio import client as k8s_client
 
             from kuberca.collector.event_watcher import EventWatcher
             from kuberca.collector.node_watcher import NodeWatcher
@@ -327,10 +338,10 @@ class KubeRCAApp:
                     elif event_type == "DELETED":
                         cache.remove("Pod", ns, name)
                         if graph is not None:
-                            graph.remove_resource("Pod", ns, name)  # type: ignore[union-attr]
+                            graph.remove_resource("Pod", ns, name)
                 await _original_pod_handle(event_type, obj, raw)
 
-            pod_watcher._handle_event = _pod_handle_with_cache  # type: ignore[assignment]
+            pod_watcher._handle_event = _pod_handle_with_cache  # type: ignore[method-assign]
 
             _original_node_handle = node_watcher._handle_event
 
@@ -344,10 +355,10 @@ class KubeRCAApp:
                     elif event_type == "DELETED":
                         cache.remove("Node", "", name)
                         if graph is not None:
-                            graph.remove_resource("Node", "", name)  # type: ignore[union-attr]
+                            graph.remove_resource("Node", "", name)
                 await _original_node_handle(event_type, obj, raw)
 
-            node_watcher._handle_event = _node_handle_with_cache  # type: ignore[assignment]
+            node_watcher._handle_event = _node_handle_with_cache  # type: ignore[method-assign]
 
             # Start all watchers as background tasks
             for watcher in [event_watcher, pod_watcher, node_watcher]:
@@ -367,11 +378,14 @@ class KubeRCAApp:
         assert self._ledger is not None
         self._log.debug("starting rule engine")
         try:
-            from kuberca.rules import build_rule_engine  # type: ignore[attr-defined]
+            from kuberca.rules import build_rule_engine
 
+            # The concrete ChangeLedger satisfies the rules.base.ChangeLedger Protocol
+            # at runtime; the minor signature divergence (since vs since_hours defaults)
+            # is a Protocol design gap that does not affect call-site compatibility.
             engine = build_rule_engine(
                 cache=self._cache,
-                ledger=self._ledger,
+                ledger=self._ledger,  # type: ignore[arg-type]
                 tier2_enabled=self.config.rule_engine.tier2_enabled,
             )
             self._rule_engine = engine
@@ -410,9 +424,10 @@ class KubeRCAApp:
         assert self._rule_engine is not None
         assert self._cache is not None
         assert self._ledger is not None
+        assert self._collector is not None
         self._log.debug("starting analyst coordinator")
         try:
-            from kuberca.analyst import AnalystCoordinator  # type: ignore[attr-defined]
+            from kuberca.analyst import AnalystCoordinator
 
             coordinator = AnalystCoordinator(
                 rule_engine=self._rule_engine,
@@ -439,7 +454,7 @@ class KubeRCAApp:
             # WorkQueue takes an analyze_fn: (resource, time_window) -> result
             coordinator = self._coordinator
             queue = WorkQueue(
-                analyze_fn=coordinator.analyze,  # type: ignore[union-attr]
+                analyze_fn=coordinator.analyze,
             )
             task = asyncio.create_task(queue.start(), name="analysis-queue")
             self._background_tasks.append(task)
@@ -471,7 +486,7 @@ class KubeRCAApp:
         assert self._scout is not None
         self._log.debug("starting notifications")
         try:
-            from kuberca.notifications import build_notification_dispatcher  # type: ignore[attr-defined]
+            from kuberca.notifications import build_notification_dispatcher
 
             dispatcher = build_notification_dispatcher(config=self.config.notifications)
             self._notifications = dispatcher
@@ -491,7 +506,7 @@ class KubeRCAApp:
         assert self._cache is not None
         self._log.debug("starting mcp server")
         try:
-            from kuberca.mcp import MCPServer  # type: ignore[attr-defined]
+            from kuberca.mcp import MCPServer
 
             mcp = MCPServer(coordinator=self._coordinator, cache=self._cache)
             task = asyncio.create_task(mcp.start(), name="mcp-server")
@@ -514,9 +529,9 @@ class KubeRCAApp:
         assert self._cache is not None
         self._log.debug("starting rest api")
         try:
-            import uvicorn  # type: ignore[import-untyped]
+            import uvicorn
 
-            from kuberca.api import build_app  # type: ignore[attr-defined]
+            from kuberca.api import build_app
 
             fastapi_app = build_app(
                 coordinator=self._coordinator,
@@ -630,7 +645,7 @@ class KubeRCAApp:
         log = self._log or get_logger("app")
         try:
             # kubernetes-asyncio uses a module-level ApiClient; close it cleanly.
-            from kubernetes_asyncio import client as k8s_client  # type: ignore[import-untyped]
+            from kubernetes_asyncio import client as k8s_client
 
             api_client = k8s_client.ApiClient()
             await api_client.close()
@@ -639,7 +654,7 @@ class KubeRCAApp:
 
 
 def _feed_graph(
-    graph: object | None,
+    graph: DependencyGraph | None,
     kind: str,
     namespace: str,
     name: str,
@@ -662,7 +677,7 @@ def _feed_graph(
             captured_at=datetime.now(tz=UTC),
             resource_version=str(raw_obj.get("metadata", {}).get("resourceVersion", "")),
         )
-        graph.add_resource(snapshot)  # type: ignore[union-attr]
+        graph.add_resource(snapshot)
     except Exception:
         pass  # Graph update failure is non-fatal
 

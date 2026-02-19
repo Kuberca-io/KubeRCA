@@ -67,7 +67,7 @@ def _styled_cache_state(state: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _get(api_url: str, path: str, params: dict[str, str] | None = None) -> dict[object, object]:
+def _get(api_url: str, path: str, params: dict[str, str] | None = None) -> dict[str, object]:
     """Perform a GET request and return the parsed JSON body.
 
     Raises click.ClickException on connection errors or non-2xx responses.
@@ -79,16 +79,13 @@ def _get(api_url: str, path: str, params: dict[str, str] | None = None) -> dict[
         response.raise_for_status()
         return response.json()  # type: ignore[no-any-return]
     except httpx.ConnectError as err:
-        raise click.ClickException(
-            f"Cannot connect to KubeRCA API at {api_url}. "
-            "Is the server running?"
-        ) from err
+        raise click.ClickException(f"Cannot connect to KubeRCA API at {api_url}. Is the server running?") from err
     except httpx.HTTPStatusError as exc:
         _handle_error_response(exc.response)
         raise  # unreachable — _handle_error_response always raises
 
 
-def _post(api_url: str, path: str, body: dict[str, object]) -> dict[object, object]:
+def _post(api_url: str, path: str, body: dict[str, object]) -> dict[str, object]:
     """Perform a POST request and return the parsed JSON body.
 
     Raises click.ClickException on connection errors or non-2xx responses.
@@ -100,10 +97,7 @@ def _post(api_url: str, path: str, body: dict[str, object]) -> dict[object, obje
         response.raise_for_status()
         return response.json()  # type: ignore[no-any-return]
     except httpx.ConnectError as err:
-        raise click.ClickException(
-            f"Cannot connect to KubeRCA API at {api_url}. "
-            "Is the server running?"
-        ) from err
+        raise click.ClickException(f"Cannot connect to KubeRCA API at {api_url}. Is the server running?") from err
     except httpx.HTTPStatusError as exc:
         _handle_error_response(exc.response)
         raise  # unreachable — _handle_error_response always raises
@@ -186,17 +180,13 @@ def cmd_status(ctx: click.Context, namespace: str | None, output_json: bool) -> 
         click.echo(json.dumps(data, indent=2))
         return
 
-    _print_status(data)  # type: ignore[arg-type]
+    _print_status(data)
 
 
 def _print_status(data: dict[str, object]) -> None:
     """Pretty-print a ClusterStatusResponse dict."""
     cache_state = str(data.get("cache_state", "unknown"))
-    click.echo(
-        click.style("Cluster Status", bold=True)
-        + "  cache: "
-        + _styled_cache_state(cache_state)
-    )
+    click.echo(click.style("Cluster Status", bold=True) + "  cache: " + _styled_cache_state(cache_state))
     click.echo("")
 
     # Pod counts
@@ -267,10 +257,7 @@ def _print_status(data: dict[str, object]) -> None:
     "--time-window",
     default=None,
     metavar="WINDOW",
-    help=(
-        "Look-back window for analysis, e.g. '2h', '30m', '1d'.  "
-        "Defaults to server configuration."
-    ),
+    help=("Look-back window for analysis, e.g. '2h', '30m', '1d'.  Defaults to server configuration."),
 )
 @click.option(
     "--json",
@@ -297,9 +284,7 @@ def cmd_analyze(
     # Validate locally before making the network call to give instant feedback.
     parts = resource.split("/")
     if len(parts) != 3 or not all(parts):
-        raise click.UsageError(
-            f"RESOURCE must be in Kind/namespace/name format, got: {resource!r}"
-        )
+        raise click.UsageError(f"RESOURCE must be in Kind/namespace/name format, got: {resource!r}")
 
     body: dict[str, object] = {"resource": resource}
     if time_window:
@@ -319,12 +304,13 @@ def cmd_analyze(
         click.echo(json.dumps(data, indent=2))
         return
 
-    _print_rca(data)  # type: ignore[arg-type]
+    _print_rca(data)
 
 
 def _print_rca(data: dict[str, object]) -> None:
     """Pretty-print an RCAResponseSchema dict."""
-    confidence = float(data.get("confidence", 0.0))
+    raw_confidence = data.get("confidence", 0.0)
+    confidence = float(raw_confidence) if isinstance(raw_confidence, (int, float, str)) else 0.0
     diagnosed_by = str(data.get("diagnosed_by", "?"))
     root_cause = str(data.get("root_cause", ""))
     rule_id = data.get("rule_id")
@@ -338,7 +324,9 @@ def _print_rca(data: dict[str, object]) -> None:
     click.echo("")
     click.echo(f"  {click.style('Root Cause:', bold=True)}      {root_cause}")
     click.echo(f"  {click.style('Confidence:', bold=True)}      {conf_str}")
-    click.echo(f"  {click.style('Diagnosed By:', bold=True)}    {diagnosed_by}" + (f"  (rule: {rule_id})" if rule_id else ""))
+    click.echo(
+        f"  {click.style('Diagnosed By:', bold=True)}    {diagnosed_by}" + (f"  (rule: {rule_id})" if rule_id else "")
+    )
 
     evidence: list[dict[str, object]] = data.get("evidence", [])  # type: ignore[assignment]
     if evidence:
@@ -355,10 +343,7 @@ def _print_rca(data: dict[str, object]) -> None:
         click.echo("")
         click.echo(click.style(f"Affected Resources ({len(affected)}):", bold=True))
         for res in affected:
-            click.echo(
-                f"  {res.get('kind', '?')}/{res.get('name', '?')} "
-                f"({res.get('namespace', '?')})"
-            )
+            click.echo(f"  {res.get('kind', '?')}/{res.get('name', '?')} ({res.get('namespace', '?')})")
 
     if remediation:
         click.echo("")

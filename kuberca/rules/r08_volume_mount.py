@@ -78,9 +78,7 @@ class VolumeMountRule(Rule):
             objects_queried += 1
             if pvc is not None:
                 related_resources.append(pvc)
-                raw = ledger.diff(
-                    "PersistentVolumeClaim", event.namespace, pvc_name, since_hours=2.0
-                )
+                raw = ledger.diff("PersistentVolumeClaim", event.namespace, pvc_name, since_hours=2.0)
                 objects_queried += 1
                 for fc in raw:
                     if _is_volume_relevant(fc):
@@ -115,9 +113,7 @@ class VolumeMountRule(Rule):
         evidence: list[EvidenceItem] = [
             EvidenceItem(
                 type=EvidenceType.EVENT,
-                timestamp=event.last_seen.astimezone(UTC).strftime(
-                    "%Y-%m-%dT%H:%M:%S.000Z"
-                ),
+                timestamp=event.last_seen.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 summary=(
                     f"Pod {event.resource_name} failed to mount/attach volume "
                     f"(count={event.count}): {event.message[:300]}"
@@ -134,39 +130,31 @@ class VolumeMountRule(Rule):
 
         for res in correlation.related_resources:
             if res.kind == "PersistentVolumeClaim":
-                affected.append(
-                    AffectedResource(kind="PersistentVolumeClaim", namespace=res.namespace, name=res.name)
-                )
+                affected.append(AffectedResource(kind="PersistentVolumeClaim", namespace=res.namespace, name=res.name))
 
         unbound_pvcs = [
             r.name
             for r in correlation.related_resources
-            if r.kind == "PersistentVolumeClaim"
-            and r.status.get("phase", "Bound") != "Bound"
+            if r.kind == "PersistentVolumeClaim" and r.status.get("phase", "Bound") != "Bound"
         ]
 
         if unbound_pvcs:
             root_cause = (
-                f"Pod {event.resource_name} cannot mount volume: "
-                f"PVC(s) {', '.join(unbound_pvcs)} are not bound."
+                f"Pod {event.resource_name} cannot mount volume: PVC(s) {', '.join(unbound_pvcs)} are not bound."
             )
         elif correlation.changes:
             latest: FieldChange = max(correlation.changes, key=lambda fc: fc.changed_at)
             evidence.append(
                 EvidenceItem(
                     type=EvidenceType.CHANGE,
-                    timestamp=latest.changed_at.astimezone(UTC).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    ),
+                    timestamp=latest.changed_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                     summary=(
-                        f"Volume field changed: '{latest.field_path}' "
-                        f"{latest.old_value!r} → {latest.new_value!r}"
+                        f"Volume field changed: '{latest.field_path}' {latest.old_value!r} → {latest.new_value!r}"
                     ),
                 )
             )
             root_cause = (
-                f"Pod {event.resource_name} failed to mount volume after a "
-                f"recent change to '{latest.field_path}'."
+                f"Pod {event.resource_name} failed to mount volume after a recent change to '{latest.field_path}'."
             )
         else:
             root_cause = (
