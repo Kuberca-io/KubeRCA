@@ -1,0 +1,36 @@
+repos:
+  # Ruff lint + format (official hook, runs standalone binary — very fast)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  # Standard file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        args: [--unsafe]          # Helm templates use {{ }}
+        exclude: ^helm/           # Helm templates aren't valid YAML
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: debug-statements
+
+  # MyPy — runs on pre-push only (~3s, too slow for every commit)
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (type check)
+        entry: uv run mypy
+        language: system
+        types: [python]
+        files: ^kuberca/
+        pass_filenames: false
+        args: [kuberca/]
+        stages: [pre-push]

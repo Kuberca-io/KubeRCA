@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" fill="none">
   <!-- KubeRCA Logo - Primary Dark Variant -->
-  
+
   <!-- Icon: Hexagonal node with Kubernetes-inspired connections -->
   <g transform="translate(40, 40)">
     <!-- Outer hexagon -->
@@ -19,7 +19,7 @@
     <line x1="-6.06" y1="3.5" x2="-13.86" y2="8" stroke="#00e5ff" stroke-width="1.3" opacity="0.4"/>
     <line x1="-6.06" y1="-3.5" x2="-13.86" y2="-8" stroke="#00e5ff" stroke-width="1.3" opacity="0.4"/>
   </g>
-  
+
   <!-- Wordmark -->
   <text x="76" y="49" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-weight="800" font-size="32" letter-spacing="-1.5">
     <tspan fill="#e2e8f0">Kube</tspan><tspan fill="#00e5ff">RCA</tspan>

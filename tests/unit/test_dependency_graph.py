@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC, datetime
 
 from kuberca.graph.dependency_graph import DependencyGraph
-from kuberca.graph.models import EdgeType, GraphNode
+from kuberca.graph.models import EdgeType
 from kuberca.models.resources import ResourceSnapshot
 
 
@@ -23,7 +21,7 @@ def _make_snapshot(
         name=name,
         spec_hash="abc123",
         spec=spec or {},
-        captured_at=datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc),
+        captured_at=datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC),
         resource_version="1",
     )
 
@@ -60,17 +58,19 @@ class TestGraphBasics:
 class TestPodEdges:
     def test_pod_with_configmap_volume(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="web",
-            spec={
-                "spec": {
-                    "volumes": [
-                        {"configMap": {"name": "app-config"}},
-                    ],
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="web",
+                spec={
+                    "spec": {
+                        "volumes": [
+                            {"configMap": {"name": "app-config"}},
+                        ],
+                    },
                 },
-            },
-        ))
+            )
+        )
         assert g.edge_count == 1
         # Pod -> ConfigMap is a forward (downstream) edge
         result = g.downstream("Pod", "default", "web")
@@ -80,17 +80,19 @@ class TestPodEdges:
 
     def test_pod_with_secret_volume(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="web",
-            spec={
-                "spec": {
-                    "volumes": [
-                        {"secret": {"secretName": "db-creds"}},
-                    ],
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="web",
+                spec={
+                    "spec": {
+                        "volumes": [
+                            {"secret": {"secretName": "db-creds"}},
+                        ],
+                    },
                 },
-            },
-        ))
+            )
+        )
         result = g.downstream("Pod", "default", "web")
         assert len(result.resources) == 1
         assert result.resources[0].kind == "Secret"
@@ -98,17 +100,19 @@ class TestPodEdges:
 
     def test_pod_with_pvc_volume(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="db",
-            spec={
-                "spec": {
-                    "volumes": [
-                        {"persistentVolumeClaim": {"claimName": "data-pvc"}},
-                    ],
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="db",
+                spec={
+                    "spec": {
+                        "volumes": [
+                            {"persistentVolumeClaim": {"claimName": "data-pvc"}},
+                        ],
+                    },
                 },
-            },
-        ))
+            )
+        )
         result = g.downstream("Pod", "default", "db")
         assert len(result.resources) == 1
         assert result.resources[0].kind == "PersistentVolumeClaim"
@@ -116,15 +120,17 @@ class TestPodEdges:
 
     def test_pod_with_node_assignment(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="web",
-            spec={
-                "spec": {
-                    "nodeName": "node-1",
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="web",
+                spec={
+                    "spec": {
+                        "nodeName": "node-1",
+                    },
                 },
-            },
-        ))
+            )
+        )
         result = g.downstream("Pod", "default", "web")
         assert len(result.resources) == 1
         assert result.resources[0].kind == "Node"
@@ -132,22 +138,24 @@ class TestPodEdges:
 
     def test_pod_with_envfrom_configmap(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="web",
-            spec={
-                "spec": {
-                    "containers": [
-                        {
-                            "name": "app",
-                            "envFrom": [
-                                {"configMapRef": {"name": "env-config"}},
-                            ],
-                        },
-                    ],
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="web",
+                spec={
+                    "spec": {
+                        "containers": [
+                            {
+                                "name": "app",
+                                "envFrom": [
+                                    {"configMapRef": {"name": "env-config"}},
+                                ],
+                            },
+                        ],
+                    },
                 },
-            },
-        ))
+            )
+        )
         result = g.downstream("Pod", "default", "web")
         assert len(result.resources) == 1
         assert result.resources[0].kind == "ConfigMap"
@@ -155,20 +163,22 @@ class TestPodEdges:
 
     def test_pod_with_multiple_dependencies(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="web",
-            spec={
-                "spec": {
-                    "nodeName": "node-1",
-                    "volumes": [
-                        {"configMap": {"name": "app-config"}},
-                        {"secret": {"secretName": "tls-cert"}},
-                        {"persistentVolumeClaim": {"claimName": "data"}},
-                    ],
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="web",
+                spec={
+                    "spec": {
+                        "nodeName": "node-1",
+                        "volumes": [
+                            {"configMap": {"name": "app-config"}},
+                            {"secret": {"secretName": "tls-cert"}},
+                            {"persistentVolumeClaim": {"claimName": "data"}},
+                        ],
+                    },
                 },
-            },
-        ))
+            )
+        )
         result = g.downstream("Pod", "default", "web")
         kinds = {r.kind for r in result.resources}
         assert kinds == {"Node", "ConfigMap", "Secret", "PersistentVolumeClaim"}
@@ -178,11 +188,13 @@ class TestPodEdges:
 class TestPVCBinding:
     def test_pvc_to_pv_binding(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="PersistentVolumeClaim",
-            name="data-pvc",
-            spec={"spec": {"volumeName": "pv-001"}},
-        ))
+        g.add_resource(
+            _make_snapshot(
+                kind="PersistentVolumeClaim",
+                name="data-pvc",
+                spec={"spec": {"volumeName": "pv-001"}},
+            )
+        )
         result = g.downstream("PersistentVolumeClaim", "default", "data-pvc")
         assert len(result.resources) == 1
         assert result.resources[0].kind == "PersistentVolume"
@@ -192,11 +204,13 @@ class TestPVCBinding:
 class TestResourceQuotaScoping:
     def test_quota_scoped_to_namespace(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="ResourceQuota",
-            namespace="production",
-            name="cpu-quota",
-        ))
+        g.add_resource(
+            _make_snapshot(
+                kind="ResourceQuota",
+                namespace="production",
+                name="cpu-quota",
+            )
+        )
         # Namespace -> ResourceQuota is the edge direction
         result = g.downstream("Namespace", "", "production")
         assert len(result.resources) == 1
@@ -207,21 +221,27 @@ class TestResourceQuotaScoping:
 class TestUpstreamTraversal:
     def test_upstream_finds_pods_using_configmap(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="web-1",
-            spec={"spec": {"volumes": [{"configMap": {"name": "shared-config"}}]}},
-        ))
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="web-2",
-            spec={"spec": {"volumes": [{"configMap": {"name": "shared-config"}}]}},
-        ))
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="worker",
-            spec={"spec": {"volumes": [{"secret": {"secretName": "other"}}]}},
-        ))
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="web-1",
+                spec={"spec": {"volumes": [{"configMap": {"name": "shared-config"}}]}},
+            )
+        )
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="web-2",
+                spec={"spec": {"volumes": [{"configMap": {"name": "shared-config"}}]}},
+            )
+        )
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="worker",
+                spec={"spec": {"volumes": [{"secret": {"secretName": "other"}}]}},
+            )
+        )
 
         result = g.upstream("ConfigMap", "default", "shared-config")
         names = {r.name for r in result.resources}
@@ -238,16 +258,20 @@ class TestMaxDepth:
     def test_depth_limit_respected(self) -> None:
         g = DependencyGraph()
         # Pod -> PVC -> PV chain
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="db",
-            spec={"spec": {"volumes": [{"persistentVolumeClaim": {"claimName": "db-pvc"}}]}},
-        ))
-        g.add_resource(_make_snapshot(
-            kind="PersistentVolumeClaim",
-            name="db-pvc",
-            spec={"spec": {"volumeName": "pv-001"}},
-        ))
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="db",
+                spec={"spec": {"volumes": [{"persistentVolumeClaim": {"claimName": "db-pvc"}}]}},
+            )
+        )
+        g.add_resource(
+            _make_snapshot(
+                kind="PersistentVolumeClaim",
+                name="db-pvc",
+                spec={"spec": {"volumeName": "pv-001"}},
+            )
+        )
 
         # depth=1 should only find PVC, not PV
         result = g.downstream("Pod", "default", "db", max_depth=1)
@@ -271,11 +295,13 @@ class TestMaxDepth:
 class TestPathBetween:
     def test_path_exists(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="web",
-            spec={"spec": {"volumes": [{"configMap": {"name": "cfg"}}]}},
-        ))
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="web",
+                spec={"spec": {"volumes": [{"configMap": {"name": "cfg"}}]}},
+            )
+        )
         pod_node = g.get_node("Pod", "default", "web")
         cm_node = g.get_node("ConfigMap", "default", "cfg")
         assert pod_node is not None
@@ -306,19 +332,23 @@ class TestPathBetween:
 class TestResourceUpdate:
     def test_re_add_updates_edges(self) -> None:
         g = DependencyGraph()
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="web",
-            spec={"spec": {"volumes": [{"configMap": {"name": "old-config"}}]}},
-        ))
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="web",
+                spec={"spec": {"volumes": [{"configMap": {"name": "old-config"}}]}},
+            )
+        )
         assert g.downstream("Pod", "default", "web").resources[0].name == "old-config"
 
         # Re-add with different volume
-        g.add_resource(_make_snapshot(
-            kind="Pod",
-            name="web",
-            spec={"spec": {"volumes": [{"configMap": {"name": "new-config"}}]}},
-        ))
+        g.add_resource(
+            _make_snapshot(
+                kind="Pod",
+                name="web",
+                spec={"spec": {"volumes": [{"configMap": {"name": "new-config"}}]}},
+            )
+        )
         result = g.downstream("Pod", "default", "web")
         assert len(result.resources) == 1
         assert result.resources[0].name == "new-config"

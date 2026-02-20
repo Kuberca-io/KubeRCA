@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -20,7 +20,7 @@ def _make_alert() -> AnomalyAlert:
         namespace="production",
         reason="Progressing",
         summary="Deployment is not progressing.",
-        detected_at=datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc),
+        detected_at=datetime(2024, 1, 15, 12, 0, 0, tzinfo=UTC),
         event_count=2,
     )
 

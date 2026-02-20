@@ -1,0 +1,62 @@
+---
+engines:
+  prospector:
+    enabled: false
+
+  pylint:
+    enabled: true
+    exclude_paths:
+      - "tests/**"
+      - "e2e/**"
+
+  bandit:
+    enabled: true
+    exclude_paths:
+      - "tests/**"
+      - "e2e/**"
+
+  pylintpython3:
+    enabled: true
+    exclude_paths:
+      - "tests/**"
+      - "e2e/**"
+
+exclude_paths:
+  - ".venv/**"
+  - "__pycache__/**"
+  - "helm/**"
+  - "docs/**"
+  - "images/**"
+
+languages:
+  python:
+    pylint:
+      disable:
+        # Naming conventions — handled by ruff (N rules)
+        - C0103  # invalid-name
+        # Missing docstrings — not enforced in this project
+        - C0114  # missing-module-docstring
+        - C0115  # missing-class-docstring
+        - C0116  # missing-function-docstring
+        # Line length — handled by ruff (E501 ignored, line-length=120)
+        - C0301  # line-too-long
+        # Module too long — not useful
+        - C0302  # too-many-lines
+        # Whitespace — handled by ruff-format
+        - C0303  # trailing-whitespace
+        - C0304  # missing-final-newline
+        # Method could be a function — ruff doesn't flag but also not useful
+        - R0201  # no-self-use
+        # Duplicate code — too noisy for test helpers
+        - R0801  # duplicate-code
+        # Complexity limits — project uses reasonable defaults
+        - R0901  # too-many-ancestors
+        - R0902  # too-many-instance-attributes
+        - R0903  # too-few-public-methods
+        - R0911  # too-many-return-statements
+        - R0913  # too-many-arguments
+        - R0914  # too-many-locals
+        # Unused imports/variables/arguments — handled by ruff (F401, F841)
+        - W0611  # unused-import
+        - W0612  # unused-variable
+        - W0613  # unused-argument

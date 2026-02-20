@@ -49,7 +49,6 @@ class TestWorkQueueSubmit:
 
     @pytest.mark.asyncio
     async def test_background_rejected_when_queue_over_80_percent(self) -> None:
-        ready = asyncio.Event()
         blocks: list[asyncio.Event] = [asyncio.Event() for _ in range(90)]
 
         call_count = 0
@@ -70,11 +69,13 @@ class TestWorkQueueSubmit:
             # Fill queue to 85 items manually by patching qsize
             import unittest.mock as mock
 
-            with mock.patch.object(queue._queue, "qsize", return_value=85):
-                with mock.patch.object(queue._queue, "full", return_value=False):
-                    with pytest.raises(QueueFullError) as exc_info:
-                        queue.submit("pod/default/bg-pod", "2h", Priority.BACKGROUND)
-                    assert exc_info.value.priority == Priority.BACKGROUND
+            with (
+                mock.patch.object(queue._queue, "qsize", return_value=85),
+                mock.patch.object(queue._queue, "full", return_value=False),
+                pytest.raises(QueueFullError) as exc_info,
+            ):
+                queue.submit("pod/default/bg-pod", "2h", Priority.BACKGROUND)
+            assert exc_info.value.priority == Priority.BACKGROUND
         finally:
             for b in blocks:
                 b.set()
@@ -90,9 +91,8 @@ class TestWorkQueueSubmit:
         try:
             import unittest.mock as mock
 
-            with mock.patch.object(queue._queue, "full", return_value=True):
-                with pytest.raises(QueueFullError):
-                    queue.submit("pod/default/my-pod", "2h", Priority.INTERACTIVE)
+            with mock.patch.object(queue._queue, "full", return_value=True), pytest.raises(QueueFullError):
+                queue.submit("pod/default/my-pod", "2h", Priority.INTERACTIVE)
         finally:
             await queue.stop()
 
@@ -149,9 +149,7 @@ class TestRateLimiting:
         try:
             queue.notify_upstream_429()
             # Effective rate should now be 10/min (default 20 halved)
-            effective = queue._compute_effective_rate(
-                __import__("time").monotonic()
-            )
+            effective = queue._compute_effective_rate(__import__("time").monotonic())
             assert effective == pytest.approx(10.0, abs=0.1)
         finally:
             await queue.stop()

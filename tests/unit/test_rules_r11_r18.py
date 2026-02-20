@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
 
-from kuberca.models.analysis import CorrelationResult
 from kuberca.models.events import EventRecord, EventSource, Severity
 from kuberca.models.resources import CachedResourceView
 from kuberca.rules.r11_failedmount_configmap import FailedMountConfigMapRule
@@ -19,8 +18,7 @@ from kuberca.rules.r16_exceed_quota import ExceedQuotaRule
 from kuberca.rules.r17_evicted import EvictedRule
 from kuberca.rules.r18_claim_lost import ClaimLostRule
 
-
-_TS = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
+_TS = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
 
 
 def _make_event(
@@ -84,10 +82,14 @@ def _make_ledger() -> MagicMock:
 # R11 FailedMount-ConfigMap
 # =====================================================================
 
+
 class TestR11FailedMountConfigMap:
     def test_matches_failedmount_with_configmap(self) -> None:
         rule = FailedMountConfigMapRule()
-        event = _make_event(reason="FailedMount", message='MountVolume.SetUp failed for volume "config" : configmap "app-config" not found')
+        event = _make_event(
+            reason="FailedMount",
+            message='MountVolume.SetUp failed for volume "config" : configmap "app-config" not found',
+        )
         assert rule.match(event) is True
 
     def test_no_match_for_non_configmap(self) -> None:
@@ -115,6 +117,7 @@ class TestR11FailedMountConfigMap:
 # R12 FailedMount-Secret
 # =====================================================================
 
+
 class TestR12FailedMountSecret:
     def test_matches_failedmount_with_secret(self) -> None:
         rule = FailedMountSecretRule()
@@ -140,10 +143,13 @@ class TestR12FailedMountSecret:
 # R13 FailedMount-PVC
 # =====================================================================
 
+
 class TestR13FailedMountPVC:
     def test_matches_failedmount_with_pvc(self) -> None:
         rule = FailedMountPVCRule()
-        event = _make_event(reason="FailedMount", message="Unable to attach or mount volumes: timed out waiting for pvc")
+        event = _make_event(
+            reason="FailedMount", message="Unable to attach or mount volumes: timed out waiting for pvc"
+        )
         assert rule.match(event) is True
 
     def test_matches_failedattachvolume(self) -> None:
@@ -174,6 +180,7 @@ class TestR13FailedMountPVC:
 # R14 FailedMount-NFS
 # =====================================================================
 
+
 class TestR14FailedMountNFS:
     def test_matches_stale_nfs_handle(self) -> None:
         rule = FailedMountNFSRule()
@@ -203,15 +210,22 @@ class TestR14FailedMountNFS:
 # R15 FailedScheduling-Node
 # =====================================================================
 
+
 class TestR15FailedSchedulingNode:
     def test_matches_taint_mismatch(self) -> None:
         rule = FailedSchedulingNodeRule()
-        event = _make_event(reason="FailedScheduling", message="0/3 nodes are available: 3 node(s) had taints that the pod didn't tolerate")
+        event = _make_event(
+            reason="FailedScheduling",
+            message="0/3 nodes are available: 3 node(s) had taints that the pod didn't tolerate",
+        )
         assert rule.match(event) is True
 
     def test_matches_affinity(self) -> None:
         rule = FailedSchedulingNodeRule()
-        event = _make_event(reason="FailedScheduling", message="0/3 nodes are available: 3 node(s) didn't match Pod's node affinity/selector")
+        event = _make_event(
+            reason="FailedScheduling",
+            message="0/3 nodes are available: 3 node(s) didn't match Pod's node affinity/selector",
+        )
         assert rule.match(event) is True
 
     def test_no_match_non_scheduling(self) -> None:
@@ -239,10 +253,14 @@ class TestR15FailedSchedulingNode:
 # R16 ExceedQuota
 # =====================================================================
 
+
 class TestR16ExceedQuota:
     def test_matches_exceeded_quota(self) -> None:
         rule = ExceedQuotaRule()
-        event = _make_event(reason="FailedCreate", message="exceeded quota: cpu-quota, requested: limits.cpu=2, used: limits.cpu=8, limited: limits.cpu=8")
+        event = _make_event(
+            reason="FailedCreate",
+            message="exceeded quota: cpu-quota, requested: limits.cpu=2, used: limits.cpu=8, limited: limits.cpu=8",
+        )
         assert rule.match(event) is True
 
     def test_matches_failedcreate_with_quota(self) -> None:
@@ -268,6 +286,7 @@ class TestR16ExceedQuota:
 # =====================================================================
 # R17 Evicted
 # =====================================================================
+
 
 class TestR17Evicted:
     def test_matches_evicted_reason(self) -> None:
@@ -303,7 +322,8 @@ class TestR17Evicted:
         )
         # Mock get to return pod first, then node
         pod_view = _make_resource_view(
-            kind="Pod", name="my-pod",
+            kind="Pod",
+            name="my-pod",
             status={"phase": "Failed"},
         )
         cache.get.side_effect = [pod_view, node_view]
@@ -315,6 +335,7 @@ class TestR17Evicted:
 # =====================================================================
 # R18 ClaimLost
 # =====================================================================
+
 
 class TestR18ClaimLost:
     def test_matches_claim_lost_reason(self) -> None:
@@ -364,30 +385,37 @@ class TestR18ClaimLost:
 # Rule metadata validation
 # =====================================================================
 
+
 class TestRuleMetadata:
-    @pytest.mark.parametrize("rule_cls,expected_id", [
-        (FailedMountConfigMapRule, "R11_failedmount_configmap"),
-        (FailedMountSecretRule, "R12_failedmount_secret"),
-        (FailedMountPVCRule, "R13_failedmount_pvc"),
-        (FailedMountNFSRule, "R14_failedmount_nfs"),
-        (FailedSchedulingNodeRule, "R15_failedscheduling_node"),
-        (ExceedQuotaRule, "R16_exceed_quota"),
-        (EvictedRule, "R17_evicted"),
-        (ClaimLostRule, "R18_claim_lost"),
-    ])
+    @pytest.mark.parametrize(
+        "rule_cls,expected_id",
+        [
+            (FailedMountConfigMapRule, "R11_failedmount_configmap"),
+            (FailedMountSecretRule, "R12_failedmount_secret"),
+            (FailedMountPVCRule, "R13_failedmount_pvc"),
+            (FailedMountNFSRule, "R14_failedmount_nfs"),
+            (FailedSchedulingNodeRule, "R15_failedscheduling_node"),
+            (ExceedQuotaRule, "R16_exceed_quota"),
+            (EvictedRule, "R17_evicted"),
+            (ClaimLostRule, "R18_claim_lost"),
+        ],
+    )
     def test_rule_ids_correct(self, rule_cls: type, expected_id: str) -> None:
         assert rule_cls.rule_id == expected_id
 
-    @pytest.mark.parametrize("rule_cls", [
-        FailedMountConfigMapRule,
-        FailedMountSecretRule,
-        FailedMountPVCRule,
-        FailedMountNFSRule,
-        FailedSchedulingNodeRule,
-        ExceedQuotaRule,
-        EvictedRule,
-        ClaimLostRule,
-    ])
+    @pytest.mark.parametrize(
+        "rule_cls",
+        [
+            FailedMountConfigMapRule,
+            FailedMountSecretRule,
+            FailedMountPVCRule,
+            FailedMountNFSRule,
+            FailedSchedulingNodeRule,
+            ExceedQuotaRule,
+            EvictedRule,
+            ClaimLostRule,
+        ],
+    )
     def test_all_have_required_attributes(self, rule_cls: type) -> None:
         assert hasattr(rule_cls, "rule_id")
         assert hasattr(rule_cls, "display_name")

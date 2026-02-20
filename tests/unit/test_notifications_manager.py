@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -15,7 +15,6 @@ from kuberca.notifications.manager import (
     NotificationChannel,
     NotificationDispatcher,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -36,7 +35,7 @@ def _make_alert(
         namespace=namespace,
         reason=reason,
         summary="Pod is crash looping.",
-        detected_at=datetime.now(tz=timezone.utc),
+        detected_at=datetime.now(tz=UTC),
         event_count=3,
     )
 

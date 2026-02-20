@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -28,7 +28,7 @@ def _make_event(
     last_seen: datetime | None = None,
 ) -> EventRecord:
     if last_seen is None:
-        last_seen = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
+        last_seen = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
     return EventRecord(
         event_id=str(uuid4()),
         cluster_id="test",
@@ -150,8 +150,8 @@ class TestThresholdRules:
 class TestCooldown:
     def test_second_alert_suppressed_within_cooldown(self) -> None:
         detector = AnomalyDetector(cooldown="15m")
-        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
-        ts2 = datetime(2026, 2, 18, 12, 10, 0, tzinfo=timezone.utc)  # 10 min later
+        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
+        ts2 = datetime(2026, 2, 18, 12, 10, 0, tzinfo=UTC)  # 10 min later
 
         event1 = _make_event(reason="OOMKilled", count=5, last_seen=ts1)
         event2 = _make_event(reason="OOMKilled", count=6, last_seen=ts2)
@@ -164,8 +164,8 @@ class TestCooldown:
 
     def test_second_alert_fires_after_cooldown_expires(self) -> None:
         detector = AnomalyDetector(cooldown="5m")
-        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
-        ts2 = datetime(2026, 2, 18, 12, 10, 0, tzinfo=timezone.utc)  # 10 min later > 5m cooldown
+        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
+        ts2 = datetime(2026, 2, 18, 12, 10, 0, tzinfo=UTC)  # 10 min later > 5m cooldown
 
         event1 = _make_event(reason="OOMKilled", count=5, last_seen=ts1)
         event2 = _make_event(reason="OOMKilled", count=8, last_seen=ts2)
@@ -178,7 +178,7 @@ class TestCooldown:
 
     def test_different_resources_dont_share_cooldown(self) -> None:
         detector = AnomalyDetector(cooldown="1h")
-        ts = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
+        ts = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
 
         event_a = _make_event(reason="OOMKilled", count=5, name="pod-a", last_seen=ts)
         event_b = _make_event(reason="OOMKilled", count=5, name="pod-b", last_seen=ts)
@@ -191,7 +191,7 @@ class TestCooldown:
 
     def test_clear_cooldown_allows_immediate_alert(self) -> None:
         detector = AnomalyDetector(cooldown="1h")
-        ts = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
+        ts = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
 
         event1 = _make_event(reason="OOMKilled", count=5, last_seen=ts)
         detector.process_event(event1)
@@ -207,8 +207,8 @@ class TestRateOfChangeRules:
     def test_rapid_escalation_fires_alert(self) -> None:
         detector = AnomalyDetector(cooldown="1h")
 
-        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
-        ts2 = datetime(2026, 2, 18, 12, 2, 0, tzinfo=timezone.utc)  # 2 minutes later
+        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
+        ts2 = datetime(2026, 2, 18, 12, 2, 0, tzinfo=UTC)  # 2 minutes later
 
         event1 = _make_event(reason="BackOff", count=1, last_seen=ts1, severity=Severity.WARNING)
         event2 = _make_event(reason="BackOff", count=10, last_seen=ts2, severity=Severity.WARNING)
@@ -222,8 +222,8 @@ class TestRateOfChangeRules:
     def test_slow_escalation_does_not_fire(self) -> None:
         detector = AnomalyDetector(cooldown="1h")
 
-        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
-        ts2 = datetime(2026, 2, 18, 12, 1, 0, tzinfo=timezone.utc)  # 1 min later
+        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
+        ts2 = datetime(2026, 2, 18, 12, 1, 0, tzinfo=UTC)  # 1 min later
 
         # Delta = 2, rate threshold = 5; count=4 stays below BackOff threshold (5)
         event1 = _make_event(reason="BackOff", count=2, last_seen=ts1, severity=Severity.WARNING)
@@ -238,8 +238,8 @@ class TestRateOfChangeRules:
         detector = AnomalyDetector(cooldown="1h")
 
         # Default BackOff rule has 5-minute observation window
-        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
-        ts2 = datetime(2026, 2, 18, 12, 10, 0, tzinfo=timezone.utc)  # >5 min
+        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
+        ts2 = datetime(2026, 2, 18, 12, 10, 0, tzinfo=UTC)  # >5 min
 
         # count=4 stays below BackOff threshold (5) so only rate rules are tested
         event1 = _make_event(reason="BackOff", count=1, last_seen=ts1, severity=Severity.WARNING)
@@ -263,8 +263,8 @@ class TestRateOfChangeRules:
         )
         detector.add_rate_rule(rule)
 
-        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
-        ts2 = datetime(2026, 2, 18, 12, 5, 0, tzinfo=timezone.utc)
+        ts1 = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
+        ts2 = datetime(2026, 2, 18, 12, 5, 0, tzinfo=UTC)
 
         event1 = _make_event(reason="Evicted", count=1, last_seen=ts1, severity=Severity.WARNING)
         event2 = _make_event(reason="Evicted", count=6, last_seen=ts2, severity=Severity.WARNING)

@@ -34,8 +34,7 @@ _UNREACHABLE_REASONS = frozenset(
 )
 
 _RE_UNREACHABLE = re.compile(
-    r"(connection refused|endpoint not ready|no endpoints|"
-    r"service unavailable|dial tcp.*i/o timeout)",
+    r"(connection refused|endpoint not ready|no endpoints|" r"service unavailable|dial tcp.*i/o timeout)",
     re.IGNORECASE,
 )
 

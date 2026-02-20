@@ -19,20 +19,19 @@ consistently across open/close/reopen cycles.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
 
 from kuberca.ledger.sqlite_store import (
-    SQLiteStore,
     _BACKPRESSURE_THRESHOLD_MS,
     _DEFAULT_MAX_VERSIONS,
     _DEFAULT_RETENTION_HOURS,
     _FLUSH_INTERVAL_SECONDS,
+    SQLiteStore,
 )
 from kuberca.models.resources import ResourceSnapshot
-
 
 # ---------------------------------------------------------------------------
 # Fixture helpers
@@ -50,7 +49,7 @@ def _snap(
     if spec is None:
         spec = {"replicas": 1}
     if captured_at is None:
-        captured_at = datetime.now(tz=timezone.utc)
+        captured_at = datetime.now(tz=UTC)
     spec_hash = hashlib.sha256(str(spec).encode()).hexdigest()
     return ResourceSnapshot(
         kind=kind,
@@ -196,7 +195,7 @@ class TestLoad:
         store = SQLiteStore(tmp_db)
         await store.open()
         try:
-            now = datetime.now(tz=timezone.utc)
+            now = datetime.now(tz=UTC)
             snap_recent = _snap(
                 captured_at=now - timedelta(hours=1),
                 resource_version="recent",
@@ -219,21 +218,17 @@ class TestLoad:
         store = SQLiteStore(tmp_db)
         await store.open()
         try:
-            now = datetime.now(tz=timezone.utc)
+            now = datetime.now(tz=UTC)
             snap = _snap(captured_at=now - timedelta(minutes=30))
             await store.store(snap)
             await store._do_flush()
 
             # 1-hour window should include it
-            results_1h = await store.load(
-                "Deployment", "default", "my-app", since=timedelta(hours=1)
-            )
+            results_1h = await store.load("Deployment", "default", "my-app", since=timedelta(hours=1))
             assert len(results_1h) == 1
 
             # 10-minute window should exclude it
-            results_10m = await store.load(
-                "Deployment", "default", "my-app", since=timedelta(minutes=10)
-            )
+            results_10m = await store.load("Deployment", "default", "my-app", since=timedelta(minutes=10))
             assert len(results_10m) == 0
         finally:
             await store.close()
@@ -242,7 +237,7 @@ class TestLoad:
         store = SQLiteStore(tmp_db)
         await store.open()
         try:
-            now = datetime.now(tz=timezone.utc)
+            now = datetime.now(tz=UTC)
             t1 = now - timedelta(hours=2)
             t2 = now - timedelta(hours=1)
             t3 = now - timedelta(minutes=30)
@@ -300,7 +295,7 @@ class TestCleanup:
         store = SQLiteStore(tmp_db, retention_hours=1)
         await store.open()
         try:
-            now = datetime.now(tz=timezone.utc)
+            now = datetime.now(tz=UTC)
             expired = _snap(captured_at=now - timedelta(hours=3), resource_version="old")
             fresh = _snap(captured_at=now - timedelta(minutes=30), resource_version="new")
             await store.store(expired)
@@ -309,11 +304,8 @@ class TestCleanup:
 
             await store.cleanup()
 
-            results = await store.load(
-                "Deployment", "default", "my-app", since=timedelta(hours=10)
-            )
+            results = await store.load("Deployment", "default", "my-app", since=timedelta(hours=10))
             # Only the fresh snapshot should remain
-            resource_versions = [r.resource_version for r in results]
             # Note: resource_version is not stored in SQLite, so check count
             assert len(results) == 1
         finally:
@@ -323,7 +315,7 @@ class TestCleanup:
         store = SQLiteStore(tmp_db, max_versions=2)
         await store.open()
         try:
-            now = datetime.now(tz=timezone.utc)
+            now = datetime.now(tz=UTC)
             # Store 4 snapshots
             for i in range(4):
                 snap = _snap(
@@ -336,9 +328,7 @@ class TestCleanup:
 
             await store.cleanup()
 
-            results = await store.load(
-                "Deployment", "default", "my-app", since=timedelta(hours=10)
-            )
+            results = await store.load("Deployment", "default", "my-app", since=timedelta(hours=10))
             assert len(results) <= 2
         finally:
             await store.close()
@@ -347,7 +337,7 @@ class TestCleanup:
         store = SQLiteStore(tmp_db, max_versions=2)
         await store.open()
         try:
-            now = datetime.now(tz=timezone.utc)
+            now = datetime.now(tz=UTC)
             times = [
                 now - timedelta(hours=5),
                 now - timedelta(hours=3),
@@ -359,9 +349,7 @@ class TestCleanup:
 
             await store.cleanup()
 
-            results = await store.load(
-                "Deployment", "default", "my-app", since=timedelta(hours=10)
-            )
+            results = await store.load("Deployment", "default", "my-app", since=timedelta(hours=10))
             assert len(results) == 2
             # Most recent should be retained
             assert results[-1].spec == {"replicas": 2}
@@ -443,7 +431,7 @@ class TestConstants:
         assert _DEFAULT_RETENTION_HOURS == 6.0
 
     def test_flush_interval_is_500ms(self) -> None:
-        assert _FLUSH_INTERVAL_SECONDS == pytest.approx(0.5, abs=0.01)
+        assert pytest.approx(0.5, abs=0.01) == _FLUSH_INTERVAL_SECONDS
 
     def test_backpressure_threshold_is_50ms(self) -> None:
-        assert _BACKPRESSURE_THRESHOLD_MS == pytest.approx(50.0, abs=0.01)
+        assert pytest.approx(50.0, abs=0.01) == _BACKPRESSURE_THRESHOLD_MS

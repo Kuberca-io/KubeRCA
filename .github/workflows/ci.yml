@@ -26,10 +26,10 @@ jobs:
         run: uv sync --dev
 
       - name: Ruff check
-        run: uv run ruff check kuberca/
+        run: uv run ruff check kuberca/ tests/
 
       - name: Ruff format check
-        run: uv run ruff format --check kuberca/
+        run: uv run ruff format --check kuberca/ tests/
 
   test:
     name: Test

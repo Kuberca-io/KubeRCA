@@ -310,7 +310,7 @@ def cmd_analyze(
 def _print_rca(data: dict[str, object]) -> None:
     """Pretty-print an RCAResponseSchema dict."""
     raw_confidence = data.get("confidence", 0.0)
-    confidence = float(raw_confidence) if isinstance(raw_confidence, (int, float, str)) else 0.0
+    confidence = float(raw_confidence) if isinstance(raw_confidence, int | float | str) else 0.0
     diagnosed_by = str(data.get("diagnosed_by", "?"))
     root_cause = str(data.get("root_cause", ""))
     rule_id = data.get("rule_id")

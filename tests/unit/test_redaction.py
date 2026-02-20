@@ -4,14 +4,11 @@ from __future__ import annotations
 
 import hashlib
 
-import pytest
-
 from kuberca.cache.redaction import (
     _hash_value,
     redact_dict,
     redact_value,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helper

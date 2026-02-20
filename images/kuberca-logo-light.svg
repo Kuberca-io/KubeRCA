@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" fill="none">
   <!-- KubeRCA Logo - Light Variant -->
-  
+
   <!-- Icon: Hexagonal node -->
   <g transform="translate(40, 40)">
     <path d="M0 -24L20.78 -12L20.78 12L0 24L-20.78 12L-20.78 -12Z" stroke="#0077b6" stroke-width="1.8" fill="none" opacity="0.2"/>
@@ -14,7 +14,7 @@
     <line x1="-6.06" y1="3.5" x2="-13.86" y2="8" stroke="#0077b6" stroke-width="1.3" opacity="0.3"/>
     <line x1="-6.06" y1="-3.5" x2="-13.86" y2="-8" stroke="#0077b6" stroke-width="1.3" opacity="0.3"/>
   </g>
-  
+
   <!-- Wordmark -->
   <text x="76" y="49" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-weight="800" font-size="32" letter-spacing="-1.5">
     <tspan fill="#0a0e17">Kube</tspan><tspan fill="#0077b6">RCA</tspan>

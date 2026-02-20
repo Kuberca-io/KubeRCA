@@ -12,8 +12,7 @@ Verifies the contracts defined in Technical Design Spec Section 3:
 
 from __future__ import annotations
 
-import copy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -27,9 +26,9 @@ from kuberca.models.analysis import (
 )
 from kuberca.models.events import (
     DiagnosisSource,
-    EvidenceType,
     EventRecord,
     EventSource,
+    EvidenceType,
     Severity,
 )
 from kuberca.models.resources import (
@@ -39,12 +38,11 @@ from kuberca.models.resources import (
     ResourceSnapshot,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-_NOW = datetime(2026, 2, 19, 12, 0, 0, tzinfo=timezone.utc)
+_NOW = datetime(2026, 2, 19, 12, 0, 0, tzinfo=UTC)
 
 
 def _make_event(**overrides: object) -> EventRecord:
