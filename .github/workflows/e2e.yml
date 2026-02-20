@@ -1,0 +1,45 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: E2E Tests (kind)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t kuberca:0.1.0 .
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: kuberca-e2e
+
+      - name: Load image into kind
+        run: kind load docker-image kuberca:0.1.0 --name kuberca-e2e
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Run E2E tests
+        run: ./e2e/run_e2e.sh
+
+      - name: Dump KubeRCA logs on failure
+        if: failure()
+        run: |
+          echo "=== KubeRCA Pod Logs ==="
+          kubectl -n kuberca-e2e logs deployment/kuberca --tail=200 2>/dev/null || true
+          echo ""
+          echo "=== Kubernetes Events ==="
+          kubectl -n kuberca-e2e get events --sort-by='.lastTimestamp' 2>/dev/null || true
