@@ -18,7 +18,7 @@
   <a href="https://kubeRCA-io.github.io/KubeRCA"><img src="https://img.shields.io/badge/Helm-v0.1.0-blue" alt="Helm"></a>
   <a href="https://github.com/KubeRCA-io/KubeRCA/pkgs/container/kuberca"><img src="https://img.shields.io/badge/Docker-ghcr.io-blue" alt="Docker"></a>
   <img src="https://img.shields.io/badge/python-%3E%3D3.12-blue" alt="Python >= 3.12">
-  <a href="https://codecov.io/gh/Kuberca-io/KubeRCA"><img src="https://codecov.io/gh/Kuberca-io/KubeRCA/graph/badge.svg" alt="codecov"></a>
+  <a href="https://codecov.io/gh/KubeRCA-io/KubeRCA"><img src="https://codecov.io/gh/KubeRCA-io/KubeRCA/graph/badge.svg" alt="codecov"></a>
 </p>
 
 ## Why KubeRCA?
