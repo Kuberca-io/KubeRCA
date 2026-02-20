@@ -151,11 +151,17 @@ _log "  Response: $HEALTH"
 
 _log ""
 _log "=== Step 5: Deploy bad workloads ==="
+# Apply exceed-quota LAST because its ResourceQuota forces all pods in the
+# namespace to declare cpu/memory requests+limits.  Pods created before the
+# quota exists are not retroactively affected.
 for manifest in "${SCRIPT_DIR}"/manifests/*.yaml; do
+    [[ "$(basename "$manifest")" == "exceed-quota.yaml" ]] && continue
     name=$(basename "$manifest" .yaml)
     _log "  Applying $name..."
     kubectl apply -f "$manifest"
 done
+_log "  Applying exceed-quota..."
+kubectl apply -f "${SCRIPT_DIR}/manifests/exceed-quota.yaml"
 
 # ── Step 6: Wait for K8s events to fire ───────────────────────────────────
 
