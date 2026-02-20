@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -10,9 +9,8 @@ from fastapi.testclient import TestClient
 
 from kuberca.api.app import create_app
 from kuberca.models.analysis import AffectedResource, EvidenceItem, RCAResponse, ResponseMeta
-from kuberca.models.events import DiagnosisSource, EvidenceType, Severity
+from kuberca.models.events import DiagnosisSource, EvidenceType
 from kuberca.models.resources import CacheReadiness
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -32,9 +30,7 @@ def _make_rca_response() -> RCAResponse:
                 summary="ErrImagePull: image not found",
             )
         ],
-        affected_resources=[
-            AffectedResource(kind="Pod", namespace="default", name="api-pod")
-        ],
+        affected_resources=[AffectedResource(kind="Pod", namespace="default", name="api-pod")],
         suggested_remediation="Fix the image tag in the Deployment spec.",
         _meta=ResponseMeta(
             kuberca_version="0.1.0",

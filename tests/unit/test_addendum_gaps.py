@@ -7,7 +7,7 @@ Gap 3: PV/ResourceQuota/Secret in cache watched kinds
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -20,15 +20,12 @@ from kuberca.llm.analyzer import LLMAnalyzer, LLMResult
 from kuberca.models.analysis import (
     AffectedResource,
     EvaluationMeta,
-    EvidenceItem,
     QualityCheckResult,
     RuleResult,
-    StateContextEntry,
 )
 from kuberca.models.config import OllamaConfig
-from kuberca.models.events import DiagnosisSource, EventRecord, EventSource, EvidenceType, Severity
+from kuberca.models.events import DiagnosisSource, EventRecord, EventSource, Severity
 from kuberca.models.resources import CacheReadiness
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -41,7 +38,7 @@ def _make_event(
     namespace: str = "default",
     name: str = "my-pod",
 ) -> EventRecord:
-    ts = datetime(2026, 2, 19, 12, 0, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 2, 19, 12, 0, 0, tzinfo=UTC)
     return EventRecord(
         event_id=str(uuid4()),
         cluster_id="test",
@@ -473,7 +470,7 @@ class TestCacheWatchedKinds:
         """Every kind in _default_kinds has a mapping in _get_list_func."""
         api = MagicMock()
         # Create all expected methods on the mock
-        for kind in _default_kinds():
+        for _kind in _default_kinds():
             # getattr on a MagicMock auto-creates attributes
             pass
 

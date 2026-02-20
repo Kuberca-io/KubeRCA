@@ -11,7 +11,7 @@ Verifies:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -20,7 +20,6 @@ import pytest
 from kuberca.cache.resource_cache import _default_kinds
 from kuberca.graph.dependency_graph import DependencyGraph
 from kuberca.models.resources import ResourceSnapshot
-
 
 # ---------------------------------------------------------------------------
 # Gap 2: api_map coverage
@@ -44,11 +43,10 @@ class TestApiMapCoverage:
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "api_map":
-                        if isinstance(node.value, ast.Dict):
-                            for key in node.value.keys:
-                                if isinstance(key, ast.Constant) and isinstance(key.value, str):
-                                    api_map_keys.add(key.value)
+                    if isinstance(target, ast.Name) and target.id == "api_map" and isinstance(node.value, ast.Dict):
+                        for key in node.value.keys:
+                            if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                                api_map_keys.add(key.value)
 
         default_kinds = set(_default_kinds())
         missing = default_kinds - api_map_keys
@@ -75,9 +73,7 @@ def _make_raw_pod(
             "labels": {"app": "test"},
             "annotations": {},
             "resourceVersion": "100",
-            "ownerReferences": [
-                {"kind": "ReplicaSet", "name": "my-rs", "uid": "rs-uid"}
-            ],
+            "ownerReferences": [{"kind": "ReplicaSet", "name": "my-rs", "uid": "rs-uid"}],
         },
         "spec": {
             "nodeName": node_name,
@@ -169,15 +165,9 @@ class TestComputeRollingRates:
                 ["diagnosed_by"],
                 registry=registry,
             )
-            metrics.rule_engine_hit_rate = Gauge(
-                "kuberca_rule_engine_hit_rate", "test", registry=registry
-            )
-            metrics.llm_escalation_rate = Gauge(
-                "kuberca_llm_escalation_rate", "test", registry=registry
-            )
-            metrics.inconclusive_rate = Gauge(
-                "kuberca_inconclusive_rate", "test", registry=registry
-            )
+            metrics.rule_engine_hit_rate = Gauge("kuberca_rule_engine_hit_rate", "test", registry=registry)
+            metrics.llm_escalation_rate = Gauge("kuberca_llm_escalation_rate", "test", registry=registry)
+            metrics.inconclusive_rate = Gauge("kuberca_inconclusive_rate", "test", registry=registry)
 
             metrics.compute_rolling_rates()
 
@@ -208,15 +198,9 @@ class TestComputeRollingRates:
                 ["diagnosed_by"],
                 registry=registry,
             )
-            metrics.rule_engine_hit_rate = Gauge(
-                "kuberca_rule_engine_hit_rate", "test", registry=registry
-            )
-            metrics.llm_escalation_rate = Gauge(
-                "kuberca_llm_escalation_rate", "test", registry=registry
-            )
-            metrics.inconclusive_rate = Gauge(
-                "kuberca_inconclusive_rate", "test", registry=registry
-            )
+            metrics.rule_engine_hit_rate = Gauge("kuberca_rule_engine_hit_rate", "test", registry=registry)
+            metrics.llm_escalation_rate = Gauge("kuberca_llm_escalation_rate", "test", registry=registry)
+            metrics.inconclusive_rate = Gauge("kuberca_inconclusive_rate", "test", registry=registry)
 
             # Simulate: 7 rule_engine, 2 llm, 1 inconclusive = 10 total
             for _ in range(7):
@@ -250,7 +234,7 @@ def _make_event(
 ):
     from kuberca.models.events import EventRecord, EventSource, Severity
 
-    ts = datetime(2026, 2, 19, 12, 0, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 2, 19, 12, 0, 0, tzinfo=UTC)
     return EventRecord(
         event_id=str(uuid4()),
         cluster_id="test",
@@ -291,15 +275,17 @@ class TestCoordinatorWithGraph:
             },
             "status": {"phase": "Running"},
         }
-        graph.add_resource(ResourceSnapshot(
-            kind="Pod",
-            namespace="default",
-            name="web-pod",
-            spec_hash="",
-            spec=pod_spec,
-            captured_at=datetime(2026, 2, 19, tzinfo=timezone.utc),
-            resource_version="1",
-        ))
+        graph.add_resource(
+            ResourceSnapshot(
+                kind="Pod",
+                namespace="default",
+                name="web-pod",
+                spec_hash="",
+                spec=pod_spec,
+                captured_at=datetime(2026, 2, 19, tzinfo=UTC),
+                resource_version="1",
+            )
+        )
         # ConfigMap itself
         cm_spec = {
             "metadata": {
@@ -311,15 +297,17 @@ class TestCoordinatorWithGraph:
             "spec": {},
             "status": {},
         }
-        graph.add_resource(ResourceSnapshot(
-            kind="ConfigMap",
-            namespace="default",
-            name="app-config",
-            spec_hash="",
-            spec=cm_spec,
-            captured_at=datetime(2026, 2, 19, tzinfo=timezone.utc),
-            resource_version="1",
-        ))
+        graph.add_resource(
+            ResourceSnapshot(
+                kind="ConfigMap",
+                namespace="default",
+                name="app-config",
+                spec_hash="",
+                spec=cm_spec,
+                captured_at=datetime(2026, 2, 19, tzinfo=UTC),
+                resource_version="1",
+            )
+        )
         return graph
 
     def test_blast_radius_returns_resources(self) -> None:

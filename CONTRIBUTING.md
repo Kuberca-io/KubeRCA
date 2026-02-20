@@ -32,6 +32,10 @@ uv sync --dev
 uv run pytest
 uv run ruff check .
 uv run mypy kuberca/
+
+# Install pre-commit hooks (one-time after cloning)
+uv run pre-commit install
+uv run pre-commit install --hook-type pre-push
 ```
 
 ## Development Workflow

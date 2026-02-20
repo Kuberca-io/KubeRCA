@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -20,7 +20,7 @@ def _make_alert(severity: Severity = Severity.ERROR) -> AnomalyAlert:
         namespace="production",
         reason="CrashLoopBackOff",
         summary="Container keeps restarting.",
-        detected_at=datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc),
+        detected_at=datetime(2024, 1, 15, 10, 30, 0, tzinfo=UTC),
         event_count=5,
     )
 

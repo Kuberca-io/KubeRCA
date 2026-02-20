@@ -15,7 +15,6 @@ import pytest
 from kuberca.config import load_config
 from kuberca.models.config import KubeRCAConfig
 
-
 # ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
@@ -186,30 +185,22 @@ class TestConfigClamping:
         config = load_config()
         assert config.api.port == 65535
 
-    def test_change_ledger_max_versions_clamped_to_minimum_2(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_change_ledger_max_versions_clamped_to_minimum_2(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("KUBERCA_CHANGE_LEDGER_MAX_VERSIONS", "1")
         config = load_config()
         assert config.change_ledger.max_versions == 2
 
-    def test_change_ledger_max_versions_clamped_to_maximum_20(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_change_ledger_max_versions_clamped_to_maximum_20(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("KUBERCA_CHANGE_LEDGER_MAX_VERSIONS", "50")
         config = load_config()
         assert config.change_ledger.max_versions == 20
 
-    def test_ollama_max_retries_clamped_to_minimum_0(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_ollama_max_retries_clamped_to_minimum_0(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("KUBERCA_OLLAMA_MAX_RETRIES", "-1")
         config = load_config()
         assert config.ollama.max_retries == 0
 
-    def test_ollama_max_retries_clamped_to_maximum_5(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_ollama_max_retries_clamped_to_maximum_5(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("KUBERCA_OLLAMA_MAX_RETRIES", "10")
         config = load_config()
         assert config.ollama.max_retries == 5

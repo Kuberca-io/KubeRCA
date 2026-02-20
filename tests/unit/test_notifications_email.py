@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import smtplib
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import patch
 
 import pytest
 
@@ -33,7 +33,7 @@ def _make_alert(severity: Severity = Severity.CRITICAL) -> AnomalyAlert:
         namespace="",
         reason="NotReady",
         summary="Node has been NotReady for 5 minutes.",
-        detected_at=datetime(2024, 3, 10, 8, 0, 0, tzinfo=timezone.utc),
+        detected_at=datetime(2024, 3, 10, 8, 0, 0, tzinfo=UTC),
         event_count=1,
     )
 

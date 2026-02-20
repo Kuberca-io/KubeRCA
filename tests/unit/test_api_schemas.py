@@ -8,7 +8,6 @@ from pydantic import ValidationError
 from kuberca.api.schemas import (
     AnalyzeRequest,
     ClusterStatus,
-    ClusterStatusResponse,
     ErrorResponse,
     HealthStatus,
 )

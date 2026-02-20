@@ -26,7 +26,6 @@ from kuberca.rules.confidence import (
     is_single_resource,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers / factories
 # ---------------------------------------------------------------------------
@@ -306,7 +305,6 @@ class TestComputeConfidenceCap:
         assert score <= 0.95
 
     def test_high_base_confidence_still_capped(self) -> None:
-        now = datetime.utcnow()
         rule = _MockRule(base_confidence=0.95)
         event = _make_event(count=1)
         corr = _corr(changes=[], related_resources=[])

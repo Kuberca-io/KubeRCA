@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
-
-import pytest
 
 from kuberca.llm.evidence import MAX_PROMPT_BYTES, EvidencePackage, _truncate_value
 from kuberca.models.events import EventRecord, EventSource, Severity
@@ -21,7 +19,7 @@ def _make_event(
     severity: Severity = Severity.WARNING,
     offset_seconds: int = 0,
 ) -> EventRecord:
-    base = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
     from datetime import timedelta
 
     ts = base + timedelta(seconds=offset_seconds)
@@ -44,7 +42,7 @@ def _make_event(
 def _make_change(field_path: str = "spec.containers.memory", offset: int = 0) -> FieldChange:
     from datetime import timedelta
 
-    base = datetime(2026, 2, 18, 11, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 2, 18, 11, 0, 0, tzinfo=UTC)
     return FieldChange(
         field_path=field_path,
         old_value="128Mi",
@@ -147,7 +145,7 @@ class TestToPromptContext:
             field_path="spec.replicas",
             old_value=None,
             new_value="3",
-            changed_at=datetime(2026, 2, 18, 11, 0, 0, tzinfo=timezone.utc),
+            changed_at=datetime(2026, 2, 18, 11, 0, 0, tzinfo=UTC),
         )
         pkg = EvidencePackage(incident_event=incident, changes=[change])
         ctx = pkg.to_prompt_context()

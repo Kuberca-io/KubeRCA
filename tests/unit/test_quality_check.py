@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
-import pytest
-
 from kuberca.llm.analyzer import LLMAnalyzer, LLMResult
-from kuberca.models.analysis import QualityCheckResult, StateContextEntry
+from kuberca.models.analysis import StateContextEntry
 from kuberca.models.config import OllamaConfig
 from kuberca.models.events import EventRecord, EventSource, Severity
 
@@ -17,7 +15,7 @@ def _make_event(
     reason: str = "OOMKilled",
     message: str = "Container was OOM killed",
 ) -> EventRecord:
-    ts = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
     return EventRecord(
         event_id=str(uuid4()),
         cluster_id="test",
@@ -112,8 +110,12 @@ class TestQualityCheckStateContradiction:
         event = _make_event(reason="FailedMount")
         state_context = [
             StateContextEntry(
-                kind="ConfigMap", namespace="default", name="app-config",
-                exists=True, status_summary="Active", relationship="volume mount",
+                kind="ConfigMap",
+                namespace="default",
+                name="app-config",
+                exists=True,
+                status_summary="Active",
+                relationship="volume mount",
             ),
         ]
         qc = analyzer.quality_check(result, event, state_context)
@@ -127,8 +129,12 @@ class TestQualityCheckStateContradiction:
         event = _make_event(reason="FailedMount")
         state_context = [
             StateContextEntry(
-                kind="ConfigMap", namespace="default", name="app-config",
-                exists=False, status_summary="<not found>", relationship="volume mount",
+                kind="ConfigMap",
+                namespace="default",
+                name="app-config",
+                exists=False,
+                status_summary="<not found>",
+                relationship="volume mount",
             ),
         ]
         qc = analyzer.quality_check(result, event, state_context)
@@ -142,8 +148,12 @@ class TestQualityCheckStateContradiction:
         event = _make_event(reason="FailedMount")
         state_context = [
             StateContextEntry(
-                kind="ConfigMap", namespace="default", name="app-config",
-                exists=False, status_summary="<not found>", relationship="volume mount",
+                kind="ConfigMap",
+                namespace="default",
+                name="app-config",
+                exists=False,
+                status_summary="<not found>",
+                relationship="volume mount",
             ),
         ]
         qc = analyzer.quality_check(result, event, state_context)
@@ -157,8 +167,12 @@ class TestQualityCheckStateContradiction:
         event = _make_event(reason="FailedMount")
         state_context = [
             StateContextEntry(
-                kind="ConfigMap", namespace="default", name="app-config",
-                exists=False, status_summary="<not found>", relationship="volume mount",
+                kind="ConfigMap",
+                namespace="default",
+                name="app-config",
+                exists=False,
+                status_summary="<not found>",
+                relationship="volume mount",
             ),
         ]
         qc = analyzer.quality_check(result, event, state_context)

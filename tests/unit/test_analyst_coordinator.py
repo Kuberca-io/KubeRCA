@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -33,7 +33,7 @@ def _make_event(
     name: str = "my-pod",
     count: int = 1,
 ) -> EventRecord:
-    ts = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
     return EventRecord(
         event_id=str(uuid4()),
         cluster_id="test",
