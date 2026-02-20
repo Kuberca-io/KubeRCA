@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" fill="none">
+  <!-- KubeRCA Logo - Monochrome Variant -->
+  
+  <g transform="translate(40, 40)">
+    <path d="M0 -24L20.78 -12L20.78 12L0 24L-20.78 12L-20.78 -12Z" stroke="#94a3b8" stroke-width="1.8" fill="none" opacity="0.2"/>
+    <path d="M0 -16L13.86 -8L13.86 8L0 16L-13.86 8L-13.86 -8Z" stroke="#94a3b8" stroke-width="1.8" fill="none" opacity="0.4"/>
+    <circle cx="0" cy="0" r="4.5" fill="#94a3b8"/>
+    <circle cx="0" cy="0" r="7" stroke="#94a3b8" stroke-width="1.3" fill="none" opacity="0.4"/>
+    <line x1="0" y1="-7" x2="0" y2="-16" stroke="#94a3b8" stroke-width="1.3" opacity="0.3"/>
+    <line x1="6.06" y1="-3.5" x2="13.86" y2="-8" stroke="#94a3b8" stroke-width="1.3" opacity="0.3"/>
+    <line x1="6.06" y1="3.5" x2="13.86" y2="8" stroke="#94a3b8" stroke-width="1.3" opacity="0.3"/>
+    <line x1="0" y1="7" x2="0" y2="16" stroke="#94a3b8" stroke-width="1.3" opacity="0.3"/>
+    <line x1="-6.06" y1="3.5" x2="-13.86" y2="8" stroke="#94a3b8" stroke-width="1.3" opacity="0.3"/>
+    <line x1="-6.06" y1="-3.5" x2="-13.86" y2="-8" stroke="#94a3b8" stroke-width="1.3" opacity="0.3"/>
+  </g>
+  
+  <text x="76" y="49" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-weight="800" font-size="32" letter-spacing="-1.5">
+    <tspan fill="#94a3b8">Kube</tspan><tspan fill="#94a3b8">RCA</tspan>
+  </text>
+</svg>

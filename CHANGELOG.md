@@ -28,4 +28,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker image** with multi-stage build (Python 3.12-slim, uv package manager)
 - **CI/CD workflows** for Docker build/push, Helm chart release, and GitHub Release creation
 
-[0.1.0]: https://github.com/Kuberca-io/KubeRCA/releases/tag/v0.1.0
+[0.1.0]: https://github.com/KubeRCA-io/KubeRCA/releases/tag/v0.1.0

@@ -12,11 +12,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Kuberca-io/KubeRCA/actions/workflows/docker-publish.yml"><img src="https://github.com/Kuberca-io/KubeRCA/actions/workflows/docker-publish.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/Kuberca-io/KubeRCA/releases"><img src="https://img.shields.io/github/v/release/Kuberca-io/KubeRCA" alt="Release"></a>
+  <a href="https://github.com/KubeRCA-io/KubeRCA/actions/workflows/docker-publish.yml"><img src="https://github.com/KubeRCA-io/KubeRCA/actions/workflows/docker-publish.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/KubeRCA-io/KubeRCA/releases"><img src="https://img.shields.io/github/v/release/KubeRCA-io/KubeRCA" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
-  <a href="https://kuberca-io.github.io/KubeRCA"><img src="https://img.shields.io/badge/Helm-v0.1.0-blue" alt="Helm"></a>
-  <a href="https://github.com/Kuberca-io/KubeRCA/pkgs/container/kuberca"><img src="https://img.shields.io/badge/Docker-ghcr.io-blue" alt="Docker"></a>
+  <a href="https://kubeRCA-io.github.io/KubeRCA"><img src="https://img.shields.io/badge/Helm-v0.1.0-blue" alt="Helm"></a>
+  <a href="https://github.com/KubeRCA-io/KubeRCA/pkgs/container/kuberca"><img src="https://img.shields.io/badge/Docker-ghcr.io-blue" alt="Docker"></a>
   <img src="https://img.shields.io/badge/python-%3E%3D3.12-blue" alt="Python >= 3.12">
   <a href="https://codecov.io/gh/Kuberca-io/KubeRCA"><img src="https://codecov.io/gh/Kuberca-io/KubeRCA/graph/badge.svg" alt="codecov"></a>
 </p>
@@ -71,7 +71,7 @@ For detailed component documentation, see [Architecture Overview](docs/architect
 ### Helm (GitHub Pages)
 
 ```bash
-helm repo add kuberca https://kuberca-io.github.io/KubeRCA
+helm repo add kuberca https://kubeRCA-io.github.io/KubeRCA
 helm install kuberca kuberca/kuberca --namespace kuberca --create-namespace
 ```
 
@@ -280,7 +280,7 @@ $ kuberca analyze Deployment/default/web --json
 ### Setup
 
 ```bash
-git clone https://github.com/Kuberca-io/KubeRCA.git
+git clone https://github.com/KubeRCA-io/KubeRCA.git
 cd KubeRCA
 uv sync --dev
 ```

@@ -4,8 +4,8 @@ Thank you for your interest in contributing to KubeRCA! This document provides g
 
 ## How to Contribute
 
-1. **Report bugs** by opening a [GitHub issue](https://github.com/Kuberca-io/KubeRCA/issues/new?template=bug_report.md)
-2. **Suggest features** via a [feature request](https://github.com/Kuberca-io/KubeRCA/issues/new?template=feature_request.md)
+1. **Report bugs** by opening a [GitHub issue](https://github.com/KubeRCA-io/KubeRCA/issues/new?template=bug_report.md)
+2. **Suggest features** via a [feature request](https://github.com/KubeRCA-io/KubeRCA/issues/new?template=feature_request.md)
 3. **Submit code** by opening a pull request
 
 ## Development Setup
@@ -22,7 +22,7 @@ Thank you for your interest in contributing to KubeRCA! This document provides g
 
 ```bash
 # Clone the repository
-git clone https://github.com/Kuberca-io/KubeRCA.git
+git clone https://github.com/KubeRCA-io/KubeRCA.git
 cd KubeRCA
 
 # Install dependencies (including dev tools)

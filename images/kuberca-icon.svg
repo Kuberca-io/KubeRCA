@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" fill="none">
+  <!-- KubeRCA Icon - Favicon / Social -->
+  
+  <!-- Outer hexagon -->
+  <path d="M28 4L50 16V40L28 52L6 40V16L28 4Z" stroke="#00e5ff" stroke-width="2" fill="none" opacity="0.3"/>
+  <!-- Inner hexagon -->
+  <path d="M28 12L42 20V36L28 44L14 36V20L28 12Z" stroke="#00e5ff" stroke-width="2" fill="none" opacity="0.6"/>
+  <!-- Central node -->
+  <circle cx="28" cy="28" r="5" fill="#00e5ff"/>
+  <!-- Pulse ring -->
+  <circle cx="28" cy="28" r="8" stroke="#00e5ff" stroke-width="1.5" fill="none" opacity="0.5"/>
+  <!-- Connection lines -->
+  <line x1="28" y1="20" x2="28" y2="12" stroke="#00e5ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="35" y1="24" x2="42" y2="20" stroke="#00e5ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="35" y1="32" x2="42" y2="36" stroke="#00e5ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="28" y1="36" x2="28" y2="44" stroke="#00e5ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="21" y1="32" x2="14" y2="36" stroke="#00e5ff" stroke-width="1.5" opacity="0.4"/>
+  <line x1="21" y1="24" x2="14" y2="20" stroke="#00e5ff" stroke-width="1.5" opacity="0.4"/>
+</svg>

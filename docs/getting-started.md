@@ -23,7 +23,7 @@ KubeRCA runs on any Kubernetes cluster. The image loading step differs by enviro
 ## 2. Build the Docker Image
 
 ```bash
-git clone https://github.com/Kuberca-io/KubeRCA.git
+git clone https://github.com/KubeRCA-io/KubeRCA.git
 cd KubeRCA
 docker build -t kuberca:0.1.0 .
 ```

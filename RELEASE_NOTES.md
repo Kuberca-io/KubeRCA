@@ -42,7 +42,7 @@ The first release of KubeRCA - a Kubernetes Root Cause Analysis system that auto
 ### Helm (GitHub Pages)
 
 ```bash
-helm repo add kuberca https://kuberca-io.github.io/KubeRCA
+helm repo add kuberca https://kubeRCA-io.github.io/KubeRCA
 helm install kuberca kuberca/kuberca --namespace kuberca --create-namespace
 ```
 
