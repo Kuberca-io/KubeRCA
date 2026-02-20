@@ -56,7 +56,7 @@ jobs:
           retention-days: 30
 
       - name: Upload to Codecov
-        if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
         uses: codecov/codecov-action@v4
         with:
           files: coverage.xml
