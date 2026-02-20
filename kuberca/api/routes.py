@@ -206,7 +206,7 @@ def _get_registered_rule_count(request: Request) -> int:
         if rule_engine is None:
             return 0
         rules = getattr(rule_engine, "_rules", None)
-        if isinstance(rules, (list, dict)):
+        if isinstance(rules, list | dict):
             return len(rules)
         return 0
     except Exception:

@@ -12,8 +12,7 @@ from kuberca.ledger.change_ledger import (
     LedgerStats,
     _estimate_snapshot_size,
 )
-from kuberca.models.resources import FieldChange, ResourceSnapshot
-
+from kuberca.models.resources import ResourceSnapshot
 
 # ---------------------------------------------------------------------------
 # Fixture helpers
@@ -70,10 +69,7 @@ class TestRecord:
 
     def test_ring_buffer_drops_oldest_at_max_versions(self) -> None:
         ledger = ChangeLedger(max_versions=3)
-        snaps = [
-            _snap(spec={"replicas": i}, resource_version=str(i))
-            for i in range(5)
-        ]
+        snaps = [_snap(spec={"replicas": i}, resource_version=str(i)) for i in range(5)]
         for s in snaps:
             ledger.record(s)
         # Only the most recent 3 should be retained
@@ -149,12 +145,10 @@ class TestDiff:
         t = datetime.utcnow()
         ledger.record(_snap(spec={"replicas": 1, "paused": False}, resource_version="1", captured_at=t))
         ledger.record(
-            _snap(spec={"replicas": 2, "paused": False}, resource_version="2",
-                  captured_at=t + timedelta(seconds=1))
+            _snap(spec={"replicas": 2, "paused": False}, resource_version="2", captured_at=t + timedelta(seconds=1))
         )
         ledger.record(
-            _snap(spec={"replicas": 2, "paused": True}, resource_version="3",
-                  captured_at=t + timedelta(seconds=2))
+            _snap(spec={"replicas": 2, "paused": True}, resource_version="3", captured_at=t + timedelta(seconds=2))
         )
         changes = ledger.diff("Deployment", "default", "my-app", since=timedelta(hours=1))
         paths = [c.field_path for c in changes]

@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
-
-import pytest
 
 from kuberca.ledger.diff import compute_diff
 from kuberca.models.resources import FieldChange
@@ -104,12 +101,8 @@ class TestNestedPaths:
         assert changes[0].field_path == "spec.replicas"
 
     def test_deeply_nested_path(self) -> None:
-        old: dict[str, object] = {
-            "spec": {"template": {"spec": {"terminationGracePeriodSeconds": 30}}}
-        }
-        new: dict[str, object] = {
-            "spec": {"template": {"spec": {"terminationGracePeriodSeconds": 60}}}
-        }
+        old: dict[str, object] = {"spec": {"template": {"spec": {"terminationGracePeriodSeconds": 30}}}}
+        new: dict[str, object] = {"spec": {"template": {"spec": {"terminationGracePeriodSeconds": 60}}}}
         changes = compute_diff(old, new)
         assert len(changes) == 1
         assert changes[0].field_path == "spec.template.spec.terminationGracePeriodSeconds"

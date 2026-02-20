@@ -253,7 +253,7 @@ def _from_raw_dict(raw: dict[str, Any], cluster_id: str) -> EventRecord | None:
     message: str = str(raw.get("message", ""))
     kube_type: str = str(raw.get("type", "Normal"))
     count_raw = raw.get("count", 1)
-    count: int = int(count_raw) if isinstance(count_raw, (int, str)) else 1
+    count: int = int(count_raw) if isinstance(count_raw, int | str) else 1
 
     labels_raw = metadata.get("labels", {})
     labels: dict[str, str] = {str(k): str(v) for k, v in labels_raw.items()} if isinstance(labels_raw, dict) else {}

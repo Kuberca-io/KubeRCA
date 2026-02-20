@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -12,20 +12,18 @@ import pytest
 
 from kuberca.llm.analyzer import (
     LLMAnalyzer,
-    LLMResult,
     _cap_raw_response,
     _compute_confidence,
     _parse_affected_resources,
 )
 from kuberca.llm.evidence import EvidencePackage
-from kuberca.models.analysis import AffectedResource
 from kuberca.models.config import OllamaConfig
 from kuberca.models.events import EventRecord, EventSource, Severity
 from kuberca.models.resources import FieldChange
 
 
 def _make_event() -> EventRecord:
-    ts = datetime(2026, 2, 18, 12, 0, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 2, 18, 12, 0, 0, tzinfo=UTC)
     return EventRecord(
         event_id=str(uuid4()),
         cluster_id="test",
@@ -43,8 +41,6 @@ def _make_event() -> EventRecord:
 
 
 def _make_evidence(with_changes: bool = False) -> EvidencePackage:
-    from datetime import timedelta
-
     incident = _make_event()
     changes = []
     if with_changes:
@@ -53,7 +49,7 @@ def _make_evidence(with_changes: bool = False) -> EvidencePackage:
                 field_path="spec.containers[0].resources.limits.memory",
                 old_value="128Mi",
                 new_value="64Mi",
-                changed_at=datetime(2026, 2, 18, 11, 0, 0, tzinfo=timezone.utc),
+                changed_at=datetime(2026, 2, 18, 11, 0, 0, tzinfo=UTC),
             )
         ]
     return EvidencePackage(
@@ -160,9 +156,7 @@ class TestLLMAnalyzerHealthCheck:
 
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {
-            "models": [{"name": "qwen2.5:7b"}]
-        }
+        mock_response.json.return_value = {"models": [{"name": "qwen2.5:7b"}]}
 
         with patch.object(analyzer._client, "get", new=AsyncMock(return_value=mock_response)):
             result = await analyzer.health_check()
@@ -217,9 +211,7 @@ class TestLLMAnalyzerAnalyze:
         raw_json = _valid_llm_response()
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": raw_json}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": raw_json}}]}
 
         with patch.object(analyzer._client, "post", new=AsyncMock(return_value=mock_response)):
             result = await analyzer.analyze(event, evidence)
@@ -243,8 +235,6 @@ class TestLLMAnalyzerAnalyze:
 
         bad_json = "not valid json {"
         good_json = _valid_llm_response()
-
-        call_count = 0
 
         def make_response(content: str) -> MagicMock:
             r = MagicMock()
@@ -278,9 +268,7 @@ class TestLLMAnalyzerAnalyze:
         bad_response.raise_for_status = MagicMock()
         bad_response.json.return_value = {"choices": [{"message": {"content": "bad json {"}}]}
 
-        with patch.object(
-            analyzer._client, "post", new=AsyncMock(return_value=bad_response)
-        ):
+        with patch.object(analyzer._client, "post", new=AsyncMock(return_value=bad_response)):
             result = await analyzer.analyze(event, evidence)
 
         assert result.success is False
@@ -341,9 +329,7 @@ class TestLLMAnalyzerAnalyze:
         partial_json = json.dumps({"root_cause": "Something went wrong"})
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": partial_json}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": partial_json}}]}
 
         with patch.object(analyzer._client, "post", new=AsyncMock(return_value=mock_response)):
             result = await analyzer.analyze(event, evidence)

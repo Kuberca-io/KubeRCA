@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 from click.testing import CliRunner
 
 from kuberca import __version__
 from kuberca.cli.main import cli
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -19,9 +17,7 @@ from kuberca.cli.main import cli
 def _status_response() -> dict[object, object]:
     return {
         "pod_counts": {"Running": 5, "Pending": 1},
-        "node_conditions": [
-            {"name": "node-1", "type": "Ready", "status": "True", "reason": ""}
-        ],
+        "node_conditions": [{"name": "node-1", "type": "Ready", "status": "True", "reason": ""}],
         "active_anomalies": [],
         "recent_events": [
             {
@@ -53,9 +49,7 @@ def _rca_response() -> dict[object, object]:
                 "debug_context": None,
             }
         ],
-        "affected_resources": [
-            {"kind": "Pod", "namespace": "default", "name": "api-pod"}
-        ],
+        "affected_resources": [{"kind": "Pod", "namespace": "default", "name": "api-pod"}],
         "suggested_remediation": "Fix the image tag.",
         "meta": {
             "kuberca_version": "0.1.0",
@@ -117,8 +111,6 @@ class TestStatusCommand:
         assert call_args[1]["params"]["namespace"] == "production"
 
     def test_status_connection_error_exits_nonzero(self) -> None:
-        import httpx
-
         runner = CliRunner()
         with patch("kuberca.cli.main._get", side_effect=Exception("cannot connect")):
             result = runner.invoke(cli, ["status"])
@@ -164,9 +156,7 @@ class TestAnalyzeCommand:
     def test_analyze_with_time_window(self) -> None:
         runner = CliRunner()
         with patch("kuberca.cli.main._post", return_value=_rca_response()) as mock_post:
-            result = runner.invoke(
-                cli, ["analyze", "Deployment/prod/api", "--time-window", "30m"]
-            )
+            result = runner.invoke(cli, ["analyze", "Deployment/prod/api", "--time-window", "30m"])
         assert result.exit_code == 0
         body = mock_post.call_args[0][2]
         assert body["time_window"] == "30m"
