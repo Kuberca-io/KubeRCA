@@ -131,7 +131,9 @@ class CrashLoopRule(Rule):
     relevant_field_paths = ["spec.template.spec.containers"]
 
     def match(self, event: EventRecord) -> bool:
-        """Return True for BackOff events seen at least 3 times."""
+        """Return True for BackOff events seen at least 3 times, or synthetic CrashLoopBackOff."""
+        if event.reason == "CrashLoopBackOff":
+            return True
         return event.reason == "BackOff" and event.count >= 3
 
     def correlate(
