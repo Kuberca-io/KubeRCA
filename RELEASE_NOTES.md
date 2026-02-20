@@ -1,3 +1,59 @@
+# KubeRCA v0.1.1
+
+Security patch and test-coverage release.
+
+## Security
+
+- **Base image switched from Debian (`python:3.12-slim`) to Alpine (`python:3.12-alpine`)**
+  - Eliminates all 23 low-severity Debian-package CVEs (apt, openssl, shadow, glibc, systemd, coreutils, util-linux, perl, sqlite3)
+  - Image size reduced from ~150 MB to ~45 MB
+- **pip removed from runtime image** — eliminates CVE-2025-8869 (medium) and CVE-2026-1703 (low)
+- Remaining: 1 medium busybox CVE (CVE-2025-60876, no upstream fix available)
+
+## Testing
+
+- **Test coverage increased from 64% to 85%** (5624 statements, 833 missed)
+- **1036 tests** (up from 623)
+- New test files covering:
+  - Rules R04-R10 (match, correlate, explain)
+  - Collectors (BaseWatcher, EventWatcher, PodWatcher, NodeWatcher)
+  - MCP server handlers and serialization
+  - Notification dispatcher factory and SMTP DSN parsing
+  - Rule discovery and engine construction
+  - ResourceCache edge cases (divergence, readiness states)
+  - App lifecycle (init, start, stop, component errors)
+  - Coverage gap tests (R02, R10, R17, base, email, evidence)
+
+## Housekeeping
+
+- `CLAUDE.md` removed from version control (remains local-only via `.gitignore`)
+
+## Install
+
+### Helm (GitHub Pages)
+
+```bash
+helm repo add kuberca https://kubeRCA-io.github.io/KubeRCA
+helm install kuberca kuberca/kuberca --namespace kuberca --create-namespace
+```
+
+### Helm (OCI)
+
+```bash
+helm install kuberca oci://ghcr.io/kuberca-io/charts/kuberca \
+  --version 0.1.1 --namespace kuberca --create-namespace
+```
+
+### Docker
+
+```bash
+docker pull ghcr.io/kuberca-io/kuberca:0.1.1
+# or
+docker pull kuberca/kuberca:0.1.1
+```
+
+---
+
 # KubeRCA v0.1.0
 
 The first release of KubeRCA - a Kubernetes Root Cause Analysis system that automatically diagnoses cluster incidents using a deterministic rule engine with optional LLM fallback.

@@ -3,7 +3,7 @@
 # Install uv, resolve dependencies, and build the project wheel.
 # The builder stage is discarded; only the virtualenv is copied forward.
 # ─────────────────────────────────────────────────────────────────────────────
-FROM python:3.12-slim AS builder
+FROM python:3.12-alpine AS builder
 
 # Security: do not run build tools as root beyond what is strictly necessary.
 # pip/uv need to write to /opt/kuberca; the COPY below handles ownership.
@@ -38,11 +38,11 @@ RUN uv sync --active --frozen --no-dev
 # Stage 2: runtime
 # Minimal image — only the pre-built virtualenv, no build tools.
 # ─────────────────────────────────────────────────────────────────────────────
-FROM python:3.12-slim AS runtime
+FROM python:3.12-alpine AS runtime
 
 LABEL org.opencontainers.image.title="KubeRCA" \
       org.opencontainers.image.description="Kubernetes Root Cause Analysis System" \
-      org.opencontainers.image.version="0.1.0" \
+      org.opencontainers.image.version="0.1.1" \
       org.opencontainers.image.source="https://github.com/kuberca-io/kuberca" \
       org.opencontainers.image.licenses="Apache-2.0"
 
@@ -51,18 +51,24 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     VIRTUAL_ENV=/opt/kuberca/venv \
     PATH="/opt/kuberca/venv/bin:${PATH}"
 
-# Create a non-root user.  UID/GID 65534 ("nobody") is the conventional choice
-# for read-only, no-privilege containers.  It maps to what the Helm chart sets
-# via runAsUser: 65534.
-RUN groupadd --system --gid 65534 kuberca 2>/dev/null || true && \
-    useradd --system --uid 65534 --gid 65534 --no-create-home kuberca 2>/dev/null || true
+# Use UID/GID 65534 ("nobody") — the conventional choice for read-only,
+# no-privilege containers.  Alpine already ships with nobody:nobody at
+# 65534:65534, so no addgroup/adduser is needed.  This maps to what the
+# Helm chart sets via runAsUser: 65534.
 
 # Copy the virtualenv from the builder stage.
 COPY --from=builder --chown=65534:65534 /opt/kuberca/venv /opt/kuberca/venv
 
+# Remove pip from the system Python — not needed at runtime and eliminates
+# CVE-2025-8869 and CVE-2026-1703.
+RUN pip uninstall -y pip setuptools 2>/dev/null; \
+    rm -rf /usr/local/lib/python3.12/site-packages/pip* \
+           /usr/local/lib/python3.12/site-packages/setuptools* \
+           /usr/local/bin/pip*
+
 # /tmp  — Python / uvicorn temporary files (readOnlyRootFilesystem=true)
 # /data — optional SQLite ledger persistence
-RUN install -d -m 0700 -o 65534 -g 65534 /tmp /data
+RUN mkdir -p /tmp /data && chmod 0700 /tmp /data && chown 65534:65534 /tmp /data
 
 USER 65534
 
