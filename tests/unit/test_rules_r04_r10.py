@@ -123,9 +123,7 @@ class TestR04ImagePullRule:
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app")
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         event = _make_event(reason="ErrImagePull", name="my-app-abc12-xyz")
         corr = rule.correlate(event, cache, _make_ledger())
         assert any(r.kind == "Deployment" and r.name == "my-app" for r in corr.related_resources)
@@ -135,9 +133,7 @@ class TestR04ImagePullRule:
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app")
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         fc = _make_field_change(
             field_path="spec.template.spec.containers[0].image",
             old_value="app:v1",
@@ -163,9 +159,7 @@ class TestR04ImagePullRule:
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app")
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         fc = _make_field_change(old_value="app:v1", new_value="app:v2")
         ledger = _make_ledger()
         ledger.diff.return_value = [fc]
@@ -190,9 +184,7 @@ class TestR04ImagePullRule:
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app")
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         event = _make_event(reason="ErrImagePull", name="my-app-abc12-xyz")
         corr = rule.correlate(event, cache, _make_ledger())
         result = rule.explain(event, corr)
@@ -242,9 +234,7 @@ class TestR05HPARule:
         )
         deploy_view = _make_resource_view(kind="Deployment", name="my-deploy")
         cache = _make_cache()
-        cache.get.side_effect = lambda kind, ns, name: (
-            hpa_view if kind == "HorizontalPodAutoscaler" else deploy_view
-        )
+        cache.get.side_effect = lambda kind, ns, name: hpa_view if kind == "HorizontalPodAutoscaler" else deploy_view
         event = _make_event(reason="FailedScale", kind="HorizontalPodAutoscaler", name="my-hpa")
         corr = rule.correlate(event, cache, _make_ledger())
         assert any(r.kind == "HorizontalPodAutoscaler" for r in corr.related_resources)
@@ -388,22 +378,12 @@ class TestR07ConfigDriftRule:
 
     def test_correlate_with_deployment_and_envfrom_configmap(self) -> None:
         rule = ConfigDriftRule()
-        deploy_spec = {
-            "template": {
-                "spec": {
-                    "containers": [
-                        {"envFrom": [{"configMapRef": {"name": "app-config"}}]}
-                    ]
-                }
-            }
-        }
+        deploy_spec = {"template": {"spec": {"containers": [{"envFrom": [{"configMapRef": {"name": "app-config"}}]}]}}}
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app", spec=deploy_spec)
         cm_view = _make_resource_view(kind="ConfigMap", name="app-config")
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         cache.get.return_value = cm_view
         event = _make_event(reason="BackOff", name="my-app-abc12-xyz", message="configmap not found")
         corr = rule.correlate(event, cache, _make_ledger())
@@ -419,22 +399,12 @@ class TestR07ConfigDriftRule:
 
     def test_explain_with_configmap_changes(self) -> None:
         rule = ConfigDriftRule()
-        deploy_spec = {
-            "template": {
-                "spec": {
-                    "containers": [
-                        {"envFrom": [{"configMapRef": {"name": "app-config"}}]}
-                    ]
-                }
-            }
-        }
+        deploy_spec = {"template": {"spec": {"containers": [{"envFrom": [{"configMapRef": {"name": "app-config"}}]}]}}}
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app", spec=deploy_spec)
         cm_view = _make_resource_view(kind="ConfigMap", name="app-config")
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         cache.get.return_value = cm_view
         fc = _make_field_change(field_path="data.DATABASE_URL", old_value="old-url", new_value="new-url")
         ledger = _make_ledger()
@@ -680,20 +650,12 @@ class TestR10ReadinessProbeRule:
     def test_correlate_finds_owning_deployment(self) -> None:
         rule = ReadinessProbeRule()
         probe_spec = {
-            "template": {
-                "spec": {
-                    "containers": [
-                        {"readinessProbe": {"httpGet": {"path": "/health", "port": 8080}}}
-                    ]
-                }
-            }
+            "template": {"spec": {"containers": [{"readinessProbe": {"httpGet": {"path": "/health", "port": 8080}}}]}}
         }
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app", spec=probe_spec)
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         event = _make_event(
             reason="Unhealthy",
             name="my-app-abc12-xyz",
@@ -713,20 +675,12 @@ class TestR10ReadinessProbeRule:
     def test_explain_with_httpget_probe_details(self) -> None:
         rule = ReadinessProbeRule()
         probe_spec = {
-            "template": {
-                "spec": {
-                    "containers": [
-                        {"readinessProbe": {"httpGet": {"path": "/health", "port": 8080}}}
-                    ]
-                }
-            }
+            "template": {"spec": {"containers": [{"readinessProbe": {"httpGet": {"path": "/health", "port": 8080}}}]}}
         }
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app", spec=probe_spec)
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         event = _make_event(
             reason="Unhealthy",
             name="my-app-abc12-xyz",
@@ -743,21 +697,11 @@ class TestR10ReadinessProbeRule:
         since {} is a dict it always matches the httpGet branch. With only tcpSocket,
         the result still shows httpGet with None values."""
         rule = ReadinessProbeRule()
-        probe_spec = {
-            "template": {
-                "spec": {
-                    "containers": [
-                        {"readinessProbe": {"tcpSocket": {"port": 5432}}}
-                    ]
-                }
-            }
-        }
+        probe_spec = {"template": {"spec": {"containers": [{"readinessProbe": {"tcpSocket": {"port": 5432}}}]}}}
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app", spec=probe_spec)
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         event = _make_event(
             reason="Unhealthy",
             name="my-app-abc12-xyz",
@@ -773,20 +717,12 @@ class TestR10ReadinessProbeRule:
         """Same precedence behavior: httpGet branch matches before exec."""
         rule = ReadinessProbeRule()
         probe_spec = {
-            "template": {
-                "spec": {
-                    "containers": [
-                        {"readinessProbe": {"exec": {"command": ["cat", "/tmp/healthy"]}}}
-                    ]
-                }
-            }
+            "template": {"spec": {"containers": [{"readinessProbe": {"exec": {"command": ["cat", "/tmp/healthy"]}}}]}}
         }
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app", spec=probe_spec)
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         event = _make_event(
             reason="Unhealthy",
             name="my-app-abc12-xyz",
@@ -803,9 +739,7 @@ class TestR10ReadinessProbeRule:
         rs_view = _make_resource_view(kind="ReplicaSet", name="my-app-abc12")
         deploy_view = _make_resource_view(kind="Deployment", name="my-app")
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         fc = _make_field_change(
             field_path="spec.template.spec.containers[0].readinessProbe.httpGet.path",
             old_value="/health",

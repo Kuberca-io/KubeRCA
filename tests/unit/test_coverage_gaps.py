@@ -265,9 +265,7 @@ class TestR02CrashLoopOwnershipResolution:
         rs_view = _make_resource_view(kind="ReplicaSet", name="simple-pod")
         deploy_view = _make_resource_view(kind="Deployment", name="simple")
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
         result = _find_owning_deployment("simple-pod", "default", cache)
         assert result is not None
         assert result.name == "simple"
@@ -408,9 +406,7 @@ class TestR02CrashLoopCorrelateWithConfigmapChanges:
             },
         )
         cache = _make_cache()
-        cache.list.side_effect = lambda kind, ns: (
-            [rs_view] if kind == "ReplicaSet" else [deploy_view]
-        )
+        cache.list.side_effect = lambda kind, ns: [rs_view] if kind == "ReplicaSet" else [deploy_view]
 
         cm_change = _make_field_change(field_path="data.DB_HOST", old_value="old-host", new_value="new-host")
         ledger = MagicMock()
@@ -476,7 +472,9 @@ class TestR02CrashLoopExplainBranches:
 
         rule = CrashLoopRule()
         deploy = _make_resource_view(kind="Deployment", name="my-deploy")
-        fc = _make_field_change(field_path="spec.template.spec.containers[0].env[0].value", old_value="a", new_value="b")
+        fc = _make_field_change(
+            field_path="spec.template.spec.containers[0].env[0].value", old_value="a", new_value="b"
+        )
         event = _make_event(reason="BackOff", message="Back-off restarting", count=5)
         corr = CorrelationResult(
             changes=[fc],
@@ -559,10 +557,7 @@ class TestEvidencePackageTruncationPipeline:
 
         incident = _make_event()
         # Create large container statuses with previousState to force step 3
-        big_statuses = [
-            {"name": f"c{i}", "state": "Running", "previousState": "x" * 500}
-            for i in range(10)
-        ]
+        big_statuses = [{"name": f"c{i}", "state": "Running", "previousState": "x" * 500} for i in range(10)]
         big_events = [_make_event(name=f"pod-{i}") for i in range(20)]
         big_specs = [{"kind": "Pod", "data": "y" * 2000} for _ in range(5)]
         big_changes = [
@@ -596,10 +591,7 @@ class TestEvidencePackageTruncationPipeline:
             )
             for i in range(30)
         ]
-        big_statuses = [
-            {"name": f"c{i}", "state": "R", "previousState": "z" * 300}
-            for i in range(10)
-        ]
+        big_statuses = [{"name": f"c{i}", "state": "R", "previousState": "z" * 300} for i in range(10)]
         big_events = [_make_event(name=f"pod-{i}") for i in range(20)]
         pkg = EvidencePackage(
             incident_event=incident,
@@ -811,11 +803,7 @@ class TestR10ProbeDetails:
             kind="Deployment",
             spec={
                 "template": {
-                    "spec": {
-                        "containers": [
-                            {"readinessProbe": {"httpGet": None, "tcpSocket": {"port": 5432}}}
-                        ]
-                    }
+                    "spec": {"containers": [{"readinessProbe": {"httpGet": None, "tcpSocket": {"port": 5432}}}]}
                 }
             },
         )
@@ -1029,9 +1017,7 @@ class _DummyRule:
         self.resource_dependencies = resource_dependencies or ["Pod"]
         self.relevant_field_paths = ["spec"]
         self._match_result = match_result
-        self._correlate_result = correlate_result or CorrelationResult(
-            objects_queried=1, duration_ms=1.0
-        )
+        self._correlate_result = correlate_result or CorrelationResult(objects_queried=1, duration_ms=1.0)
         self._explain_confidence = explain_confidence
         self._correlate_exception = correlate_exception
         self._match_exception = match_exception

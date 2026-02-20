@@ -76,8 +76,7 @@ class TestDiscoverRules:
         """discover_rules() must return exactly 18 concrete Rule subclasses (R01-R18)."""
         rules = discover_rules()
         assert len(rules) == _EXPECTED_RULE_COUNT, (
-            f"Expected {_EXPECTED_RULE_COUNT} rules, got {len(rules)}: "
-            f"{[cls.rule_id for cls in rules]}"
+            f"Expected {_EXPECTED_RULE_COUNT} rules, got {len(rules)}: {[cls.rule_id for cls in rules]}"
         )
 
     def test_no_duplicate_rule_ids(self) -> None:
@@ -129,9 +128,7 @@ class TestDiscoverRules:
             assert isinstance(item, type), (
                 f"Expected a class (type), got an instance of {type(item).__name__}: {item!r}"
             )
-            assert issubclass(item, Rule), (
-                f"{item!r} is a type but is not a subclass of Rule"
-            )
+            assert issubclass(item, Rule), f"{item!r} is a type but is not a subclass of Rule"
 
 
 # ---------------------------------------------------------------------------
@@ -206,8 +203,7 @@ class TestBuildRuleEngine:
         assert rules, "engine._rules is empty — no rules were registered"
         sort_keys = [(rule.priority, rule.rule_id) for rule in rules]
         assert sort_keys == sorted(sort_keys), (
-            "Rules are not in sorted (priority, rule_id) order. "
-            f"Actual order: {sort_keys}"
+            f"Rules are not in sorted (priority, rule_id) order. Actual order: {sort_keys}"
         )
 
     def test_each_registered_rule_is_a_rule_instance(self) -> None:
@@ -219,12 +215,8 @@ class TestBuildRuleEngine:
         """
         engine = build_rule_engine(_make_cache(), _make_ledger(), tier2_enabled=True)
         for item in engine._rules:
-            assert isinstance(item, Rule), (
-                f"Expected a Rule instance, got {type(item)!r}: {item!r}"
-            )
-            assert not isinstance(item, type), (
-                f"Rule class {item!r} was registered as a class, not an instance"
-            )
+            assert isinstance(item, Rule), f"Expected a Rule instance, got {type(item)!r}: {item!r}"
+            assert not isinstance(item, type), f"Rule class {item!r} was registered as a class, not an instance"
 
     def test_cache_and_ledger_passed_to_engine(self) -> None:
         """The cache and ledger passed to build_rule_engine must be stored on the engine.
@@ -251,6 +243,5 @@ class TestBuildRuleEngine:
         registered_ids = {rule.rule_id for rule in engine._rules}
         for rule_id in _TIER1_RULE_IDS:
             assert rule_id in registered_ids, (
-                f"Tier 1 rule {rule_id!r} is missing from engine "
-                f"(tier2_enabled={tier2_enabled})"
+                f"Tier 1 rule {rule_id!r} is missing from engine (tier2_enabled={tier2_enabled})"
             )

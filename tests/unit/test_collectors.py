@@ -472,9 +472,7 @@ class TestExtractRV:
         """Extracts resourceVersion from a BOOKMARK raw_event structure."""
         raw_event = {
             "type": "BOOKMARK",
-            "raw_object": {
-                "metadata": {"resourceVersion": "12345"}
-            },
+            "raw_object": {"metadata": {"resourceVersion": "12345"}},
         }
         result = _extract_rv_from_bookmark(raw_event)
 
@@ -750,17 +748,11 @@ class TestEventWatcher:
         now = datetime.now(tz=UTC)
 
         # Add a matching record
-        watcher._buffer.append(
-            _make_event_record(resource_kind="Pod", resource_name="target", last_seen=now)
-        )
+        watcher._buffer.append(_make_event_record(resource_kind="Pod", resource_name="target", last_seen=now))
         # Add a non-matching record (different kind)
-        watcher._buffer.append(
-            _make_event_record(resource_kind="Deployment", resource_name="target", last_seen=now)
-        )
+        watcher._buffer.append(_make_event_record(resource_kind="Deployment", resource_name="target", last_seen=now))
         # Add a non-matching record (different name)
-        watcher._buffer.append(
-            _make_event_record(resource_kind="Pod", resource_name="other", last_seen=now)
-        )
+        watcher._buffer.append(_make_event_record(resource_kind="Pod", resource_name="other", last_seen=now))
 
         results = watcher.get_events("Pod", "default", "target")
 
@@ -805,9 +797,7 @@ class TestEventWatcher:
         watcher = self._make_watcher()
         stale_time = datetime.now(tz=UTC) - timedelta(hours=3)
 
-        watcher._buffer.append(
-            _make_event_record(resource_kind="Pod", resource_name="p", last_seen=stale_time)
-        )
+        watcher._buffer.append(_make_event_record(resource_kind="Pod", resource_name="p", last_seen=stale_time))
 
         results = watcher.get_events("Pod", "default", "p")
 
@@ -822,12 +812,8 @@ class TestEventWatcher:
         later = now - timedelta(minutes=10)
         since = now - timedelta(minutes=60)
 
-        watcher._buffer.append(
-            _make_event_record(resource_kind="Pod", resource_name="p", last_seen=earlier)
-        )
-        watcher._buffer.append(
-            _make_event_record(resource_kind="Pod", resource_name="p", last_seen=later)
-        )
+        watcher._buffer.append(_make_event_record(resource_kind="Pod", resource_name="p", last_seen=earlier))
+        watcher._buffer.append(_make_event_record(resource_kind="Pod", resource_name="p", last_seen=later))
 
         results = watcher.get_events("Pod", "", "p", since=since)
 

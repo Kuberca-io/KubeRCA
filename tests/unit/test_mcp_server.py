@@ -303,9 +303,7 @@ class TestHandleAnalyzeIncident:
         coordinator = _make_coordinator(rca=rca)
         server = _make_mcp_server(coordinator=coordinator)
 
-        await server._handle_analyze_incident(
-            {"resource": "Pod/default/my-pod", "time_window": "1h"}
-        )
+        await server._handle_analyze_incident({"resource": "Pod/default/my-pod", "time_window": "1h"})
 
         coordinator.analyze.assert_called_once_with(
             resource="Pod/default/my-pod",

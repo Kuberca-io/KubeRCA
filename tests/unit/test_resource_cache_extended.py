@@ -392,7 +392,12 @@ class TestUpdateEdgeCases:
         _populate_kind(cache, kind, 200)
 
         # Update an existing resource — should succeed regardless of cap
-        cache.update(kind, "default", f"{kind.lower()}-0", {"metadata": {"resourceVersion": "999"}, "spec": {"key": "updated"}, "status": {}})
+        cache.update(
+            kind,
+            "default",
+            f"{kind.lower()}-0",
+            {"metadata": {"resourceVersion": "999"}, "spec": {"key": "updated"}, "status": {}},
+        )
 
         updated = cache.get(kind, "default", f"{kind.lower()}-0")
         assert updated is not None
@@ -417,18 +422,28 @@ class TestUpdateEdgeCases:
     def test_in_place_update_changes_fields(self) -> None:
         """update() on an existing resource must mutate the stored fields in place."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "my-pod", {
-            "metadata": {"resourceVersion": "1", "labels": {"env": "dev"}, "annotations": {}},
-            "spec": {"replicas": 1},
-            "status": {"phase": "Pending"},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "my-pod",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {"env": "dev"}, "annotations": {}},
+                "spec": {"replicas": 1},
+                "status": {"phase": "Pending"},
+            },
+        )
 
         # Mutate the resource
-        cache.update("Pod", "default", "my-pod", {
-            "metadata": {"resourceVersion": "2", "labels": {"env": "prod"}, "annotations": {"note": "updated"}},
-            "spec": {"replicas": 3},
-            "status": {"phase": "Running"},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "my-pod",
+            {
+                "metadata": {"resourceVersion": "2", "labels": {"env": "prod"}, "annotations": {"note": "updated"}},
+                "spec": {"replicas": 3},
+                "status": {"phase": "Running"},
+            },
+        )
 
         view = cache.get("Pod", "default", "my-pod")
         assert view is not None
@@ -441,22 +456,32 @@ class TestUpdateEdgeCases:
         """update() on an existing resource must invalidate the cached redacted view
         so that the next get() returns a fresh view with the new data."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "my-pod", {
-            "metadata": {"resourceVersion": "1", "labels": {}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "my-pod",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
 
         # Force view creation and cache it
         first_view = cache.get("Pod", "default", "my-pod")
         assert first_view is not None
 
         # Mutate
-        cache.update("Pod", "default", "my-pod", {
-            "metadata": {"resourceVersion": "2", "labels": {}, "annotations": {}},
-            "spec": {},
-            "status": {"phase": "Terminating"},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "my-pod",
+            {
+                "metadata": {"resourceVersion": "2", "labels": {}, "annotations": {}},
+                "spec": {},
+                "status": {"phase": "Terminating"},
+            },
+        )
 
         second_view = cache.get("Pod", "default", "my-pod")
         assert second_view is not None
@@ -468,11 +493,16 @@ class TestUpdateEdgeCases:
         """update() when raw_obj['metadata'] is not a dict must not raise;
         the resource is stored with empty labels, annotations, and no resource version."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "bad-meta", {
-            "metadata": "not-a-dict",
-            "spec": {},
-            "status": {},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "bad-meta",
+            {
+                "metadata": "not-a-dict",
+                "spec": {},
+                "status": {},
+            },
+        )
 
         # Resource should still be stored (graceful fallback)
         resource = cache._store.get("Pod", {}).get("default", {}).get("bad-meta")
@@ -484,11 +514,16 @@ class TestUpdateEdgeCases:
     def test_update_with_non_dict_spec(self) -> None:
         """update() with a non-dict 'spec' must substitute an empty dict."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "bad-spec", {
-            "metadata": {"resourceVersion": "1", "labels": {}, "annotations": {}},
-            "spec": "not-a-dict",
-            "status": {},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "bad-spec",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {}, "annotations": {}},
+                "spec": "not-a-dict",
+                "status": {},
+            },
+        )
 
         view = cache.get("Pod", "default", "bad-spec")
         assert view is not None
@@ -497,11 +532,16 @@ class TestUpdateEdgeCases:
     def test_update_with_non_dict_status(self) -> None:
         """update() with a non-dict 'status' must substitute an empty dict."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "bad-status", {
-            "metadata": {"resourceVersion": "1", "labels": {}, "annotations": {}},
-            "spec": {},
-            "status": 42,
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "bad-status",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {}, "annotations": {}},
+                "spec": {},
+                "status": 42,
+            },
+        )
 
         view = cache.get("Pod", "default", "bad-status")
         assert view is not None
@@ -510,9 +550,14 @@ class TestUpdateEdgeCases:
     def test_update_with_missing_spec_and_status(self) -> None:
         """update() on raw_obj without 'spec' or 'status' keys must default both to {}."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "minimal-pod", {
-            "metadata": {"resourceVersion": "1", "labels": {}, "annotations": {}},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "minimal-pod",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {}, "annotations": {}},
+            },
+        )
 
         view = cache.get("Pod", "default", "minimal-pod")
         assert view is not None
@@ -538,11 +583,16 @@ class TestUpdateEdgeCases:
     def test_update_stores_resource_version(self) -> None:
         """update() must persist the resourceVersion from metadata."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "versioned-pod", {
-            "metadata": {"resourceVersion": "42", "labels": {}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "versioned-pod",
+            {
+                "metadata": {"resourceVersion": "42", "labels": {}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
 
         view = cache.get("Pod", "default", "versioned-pod")
         assert view is not None
@@ -551,11 +601,16 @@ class TestUpdateEdgeCases:
     def test_update_without_resource_version(self) -> None:
         """update() with no resourceVersion in metadata must not raise; uses empty string."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "no-rv-pod", {
-            "metadata": {"labels": {}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "no-rv-pod",
+            {
+                "metadata": {"labels": {}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
 
         view = cache.get("Pod", "default", "no-rv-pod")
         assert view is not None
@@ -564,15 +619,20 @@ class TestUpdateEdgeCases:
     def test_update_labels_with_non_string_values(self) -> None:
         """update() must coerce non-string label keys/values to strings."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "typed-labels", {
-            "metadata": {
-                "resourceVersion": "1",
-                "labels": {"count": 3, "enabled": True},
-                "annotations": {},
+        cache.update(
+            "Pod",
+            "default",
+            "typed-labels",
+            {
+                "metadata": {
+                    "resourceVersion": "1",
+                    "labels": {"count": 3, "enabled": True},
+                    "annotations": {},
+                },
+                "spec": {},
+                "status": {},
             },
-            "spec": {},
-            "status": {},
-        })
+        )
 
         view = cache.get("Pod", "default", "typed-labels")
         assert view is not None
@@ -581,15 +641,20 @@ class TestUpdateEdgeCases:
     def test_update_non_dict_labels_gives_empty_labels(self) -> None:
         """update() with non-dict labels must produce an empty labels dict."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "bad-labels", {
-            "metadata": {
-                "resourceVersion": "1",
-                "labels": ["not", "a", "dict"],
-                "annotations": {},
+        cache.update(
+            "Pod",
+            "default",
+            "bad-labels",
+            {
+                "metadata": {
+                    "resourceVersion": "1",
+                    "labels": ["not", "a", "dict"],
+                    "annotations": {},
+                },
+                "spec": {},
+                "status": {},
             },
-            "spec": {},
-            "status": {},
-        })
+        )
 
         view = cache.get("Pod", "default", "bad-labels")
         assert view is not None
@@ -632,11 +697,16 @@ class TestListAndGet:
         from kuberca.models.resources import CachedResourceView
 
         cache = ResourceCache()
-        cache.update("Pod", "default", "my-pod", {
-            "metadata": {"resourceVersion": "7", "labels": {"app": "web"}, "annotations": {}},
-            "spec": {"image": "nginx"},
-            "status": {"phase": "Running"},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "my-pod",
+            {
+                "metadata": {"resourceVersion": "7", "labels": {"app": "web"}, "annotations": {}},
+                "spec": {"image": "nginx"},
+                "status": {"phase": "Running"},
+            },
+        )
 
         view = cache.get("Pod", "default", "my-pod")
         assert isinstance(view, CachedResourceView)
@@ -705,21 +775,36 @@ class TestListAndGet:
         cache = ResourceCache()
 
         # Insert pods with different labels
-        cache.update("Pod", "default", "web-pod", {
-            "metadata": {"resourceVersion": "1", "labels": {"app": "web", "tier": "frontend"}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
-        cache.update("Pod", "default", "db-pod", {
-            "metadata": {"resourceVersion": "1", "labels": {"app": "db", "tier": "backend"}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
-        cache.update("Pod", "default", "api-pod", {
-            "metadata": {"resourceVersion": "1", "labels": {"app": "api"}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "web-pod",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {"app": "web", "tier": "frontend"}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
+        cache.update(
+            "Pod",
+            "default",
+            "db-pod",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {"app": "db", "tier": "backend"}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
+        cache.update(
+            "Pod",
+            "default",
+            "api-pod",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {"app": "api"}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
 
         web_pods = cache.list_by_label("Pod", {"app": "web"})
         assert len(web_pods) == 1
@@ -728,15 +813,20 @@ class TestListAndGet:
     def test_list_by_label_superset_match(self) -> None:
         """list_by_label() must match when resource labels are a strict superset of query labels."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "multi-label-pod", {
-            "metadata": {
-                "resourceVersion": "1",
-                "labels": {"app": "api", "env": "prod", "version": "v2"},
-                "annotations": {},
+        cache.update(
+            "Pod",
+            "default",
+            "multi-label-pod",
+            {
+                "metadata": {
+                    "resourceVersion": "1",
+                    "labels": {"app": "api", "env": "prod", "version": "v2"},
+                    "annotations": {},
+                },
+                "spec": {},
+                "status": {},
             },
-            "spec": {},
-            "status": {},
-        })
+        )
 
         # Query with subset of labels
         matches = cache.list_by_label("Pod", {"app": "api", "env": "prod"})
@@ -746,11 +836,16 @@ class TestListAndGet:
     def test_list_by_label_no_match(self) -> None:
         """list_by_label() must return empty when no resource matches the label query."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "my-pod", {
-            "metadata": {"resourceVersion": "1", "labels": {"app": "web"}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "my-pod",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {"app": "web"}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
 
         result = cache.list_by_label("Pod", {"app": "missing"})
         assert result == []
@@ -766,16 +861,26 @@ class TestListAndGet:
     def test_list_by_label_filtered_by_namespace(self) -> None:
         """list_by_label() with ns parameter must restrict results to that namespace."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "pod-a", {
-            "metadata": {"resourceVersion": "1", "labels": {"env": "staging"}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
-        cache.update("Pod", "production", "pod-b", {
-            "metadata": {"resourceVersion": "1", "labels": {"env": "staging"}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "pod-a",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {"env": "staging"}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
+        cache.update(
+            "Pod",
+            "production",
+            "pod-b",
+            {
+                "metadata": {"resourceVersion": "1", "labels": {"env": "staging"}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
 
         default_results = cache.list_by_label("Pod", {"env": "staging"}, ns="default")
         assert len(default_results) == 1
@@ -815,16 +920,26 @@ class TestListAndGet:
     def test_resource_version_tracks_latest(self) -> None:
         """resource_version() must reflect the most recent resourceVersion seen."""
         cache = ResourceCache()
-        cache.update("Pod", "default", "pod-a", {
-            "metadata": {"resourceVersion": "100", "labels": {}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
-        cache.update("Pod", "default", "pod-b", {
-            "metadata": {"resourceVersion": "200", "labels": {}, "annotations": {}},
-            "spec": {},
-            "status": {},
-        })
+        cache.update(
+            "Pod",
+            "default",
+            "pod-a",
+            {
+                "metadata": {"resourceVersion": "100", "labels": {}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
+        cache.update(
+            "Pod",
+            "default",
+            "pod-b",
+            {
+                "metadata": {"resourceVersion": "200", "labels": {}, "annotations": {}},
+                "spec": {},
+                "status": {},
+            },
+        )
 
         # resource_version is updated on each update() call; last write wins
         assert cache.resource_version("Pod") == "200"
