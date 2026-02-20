@@ -81,8 +81,10 @@ cython_debug/
 .uv/
 
 # business docs (keep .md guides tracked)
-docs/*.docx
-docs/*.html
+business-docs/
+
+# Helm package artifacts
+*.tgz
 
 # logos (keep SVGs tracked)
 images/*.png
