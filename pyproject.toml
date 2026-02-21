@@ -71,4 +71,5 @@ asyncio_mode = "auto"
 markers = [
     "integration: marks tests as integration tests",
     "performance: marks tests as performance benchmarks",
+    "stress: marks tests as load/stress tests (burst evaluation, memory bounds)",
 ]

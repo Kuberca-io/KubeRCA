@@ -49,6 +49,7 @@ from kuberca.observability.metrics import (
     cache_relist_timeout_total,
     cache_resources,
     cache_state,
+    cache_state_transitions_total,
 )
 
 # ---------------------------------------------------------------------------
@@ -532,14 +533,24 @@ class ResourceCache:
 
     def _recompute_readiness(self) -> None:
         """Recompute and update the readiness state."""
+        previous = self._readiness
+
         if not self._all_kinds:
             # No kinds registered yet — remain WARMING
             self._readiness = CacheReadiness.WARMING
+            if self._readiness != previous:
+                cache_state_transitions_total.labels(
+                    from_state=previous.value, to_state=self._readiness.value
+                ).inc()
             self._emit_state_metric()
             return
 
         if self._is_diverged():
             self._readiness = CacheReadiness.DEGRADED
+            if self._readiness != previous:
+                cache_state_transitions_total.labels(
+                    from_state=previous.value, to_state=self._readiness.value
+                ).inc()
             self._emit_state_metric()
             return
 
@@ -561,6 +572,10 @@ class ResourceCache:
         else:
             self._readiness = CacheReadiness.WARMING
 
+        if self._readiness != previous:
+            cache_state_transitions_total.labels(
+                from_state=previous.value, to_state=self._readiness.value
+            ).inc()
         self._emit_state_metric()
 
     def _emit_state_metric(self) -> None:

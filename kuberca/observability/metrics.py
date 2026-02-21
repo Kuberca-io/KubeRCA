@@ -89,6 +89,12 @@ cache_relist_fallback_total = Counter(
     "Total cache relist fallbacks to partial",
 )
 
+cache_state_transitions_total = Counter(
+    "kuberca_cache_state_transitions_total",
+    "Total cache state transitions",
+    ["from_state", "to_state"],
+)
+
 # Ledger metrics
 ledger_snapshots = Gauge(
     "kuberca_ledger_snapshots",

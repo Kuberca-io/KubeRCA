@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Test coverage increased from 85% to 97% (1007 → 1353 tests)
+- Test coverage increased from 85% to 97% (1007 → 1536 tests)
 - 5 new test files:
   - `test_app_startup.py` — 68 tests for app lifecycle startup methods
   - `test_coordinator_helpers.py` — 75 tests for analyst coordinator internal helpers
@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `test_coverage_boost.py` — 69 tests for ResourceCache, ChangeLedger, redaction engine, WorkQueue
   - `test_coverage_misc.py` — 79 tests for CLI, API routes, dependency graph, MCP server, logging
 - Tier 1 rule tests (`test_rules_r01_r03.py`) — comprehensive match/correlate/explain coverage for OOMKilled, CrashLoopBackOff, FailedScheduling
+- Confidence stability tests (`test_confidence_stability.py`) — 29 tests proving rule engine determinism under adversarial conditions (competing rule pairs, 100-replay stability, 1000-call idempotency, band transition logic)
+- CLI test coverage expanded (`test_cli_main.py`) — 34 new tests (14 → 48) covering all cache states, confidence color thresholds, analyze edge cases, anomaly display, event truncation, HTTP error handling, invalid resource formats
+- Load/stress integration tests (`test_load_stress.py`) — 12 tests validating 1000-event throughput, p95 latency < 500ms, ledger memory bounds, soft trim recovery, deterministic confidence under sustained load
+- Cache state transition Prometheus counter (`kuberca_cache_state_transitions_total`) with `from_state`/`to_state` labels for PromQL-based churn alerting
+- Cache state transition tests (`test_cache_state_transitions.py`) — 10 tests covering all transition paths and no-op stability
 
 ### Fixed
 
