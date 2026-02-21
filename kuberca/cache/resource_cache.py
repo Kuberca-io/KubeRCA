@@ -50,6 +50,7 @@ from kuberca.observability.metrics import (
     cache_resources,
     cache_state,
     cache_state_transitions_total,
+    invariant_violations_total,
 )
 
 # ---------------------------------------------------------------------------
@@ -539,18 +540,14 @@ class ResourceCache:
             # No kinds registered yet — remain WARMING
             self._readiness = CacheReadiness.WARMING
             if self._readiness != previous:
-                cache_state_transitions_total.labels(
-                    from_state=previous.value, to_state=self._readiness.value
-                ).inc()
+                cache_state_transitions_total.labels(from_state=previous.value, to_state=self._readiness.value).inc()
             self._emit_state_metric()
             return
 
         if self._is_diverged():
             self._readiness = CacheReadiness.DEGRADED
             if self._readiness != previous:
-                cache_state_transitions_total.labels(
-                    from_state=previous.value, to_state=self._readiness.value
-                ).inc()
+                cache_state_transitions_total.labels(from_state=previous.value, to_state=self._readiness.value).inc()
             self._emit_state_metric()
             return
 
@@ -573,9 +570,26 @@ class ResourceCache:
             self._readiness = CacheReadiness.WARMING
 
         if self._readiness != previous:
-            cache_state_transitions_total.labels(
-                from_state=previous.value, to_state=self._readiness.value
-            ).inc()
+            # INV-CS01: Validate transition is in the allowed set
+            _valid_transitions = {
+                (CacheReadiness.WARMING, CacheReadiness.PARTIALLY_READY),
+                (CacheReadiness.WARMING, CacheReadiness.DEGRADED),
+                (CacheReadiness.WARMING, CacheReadiness.READY),
+                (CacheReadiness.PARTIALLY_READY, CacheReadiness.READY),
+                (CacheReadiness.PARTIALLY_READY, CacheReadiness.DEGRADED),
+                (CacheReadiness.READY, CacheReadiness.DEGRADED),
+                (CacheReadiness.DEGRADED, CacheReadiness.READY),
+                (CacheReadiness.DEGRADED, CacheReadiness.PARTIALLY_READY),
+            }
+            if (previous, self._readiness) not in _valid_transitions:
+                self._log.error(
+                    "invariant_violated",
+                    invariant="INV-CS01_valid_transition",
+                    from_state=previous.value,
+                    to_state=self._readiness.value,
+                )
+                invariant_violations_total.labels(invariant_name="INV-CS01_valid_transition").inc()
+            cache_state_transitions_total.labels(from_state=previous.value, to_state=self._readiness.value).inc()
         self._emit_state_metric()
 
     def _emit_state_metric(self) -> None:

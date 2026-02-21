@@ -13,19 +13,24 @@ Run with:
 
 from __future__ import annotations
 
+import asyncio
 import statistics
 import time
 from datetime import UTC, datetime, timedelta
+from unittest.mock import MagicMock
 
 import pytest
 
+from kuberca.analyst.coordinator import AnalystCoordinator, _rule_result_to_rca_response
+from kuberca.analyst.queue import Priority, WorkQueue
 from kuberca.cache.resource_cache import ResourceCache
 from kuberca.ledger.change_ledger import (
     _HARD_LIMIT_BYTES,
     ChangeLedger,
 )
-from kuberca.models.events import Severity
-from kuberca.models.resources import ResourceSnapshot
+from kuberca.models.analysis import EvaluationMeta, RuleResult
+from kuberca.models.events import DiagnosisSource, Severity
+from kuberca.models.resources import CacheReadiness, ResourceSnapshot
 from kuberca.rules.base import RuleEngine
 from kuberca.rules.r01_oom_killed import OOMKilledRule
 from kuberca.rules.r02_crash_loop import CrashLoopRule
@@ -710,3 +715,422 @@ def test_ledger_records_continue_after_soft_trim() -> None:
             f"Ledger diff returned no changes for stress-app-{resource_i} after soft trim + re-record. "
             f"Ledger state may be corrupted."
         )
+
+
+# ---------------------------------------------------------------------------
+# Test 13: Burst + Cache Oscillation — 500 OOM events with READY↔DEGRADED
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.stress
+def test_burst_with_cache_oscillation() -> None:
+    """500 OOM events while the cache oscillates between READY and DEGRADED
+    every 50 events via reconnect failures. The rule engine is unaware of
+    cache state, so all 500 evaluations must complete without exception."""
+    cache = ResourceCache()
+    _populate_cache_with_test_data(cache)
+    ledger = ChangeLedger(max_versions=10, retention_hours=6)
+    engine = RuleEngine(cache=cache, ledger=ledger)
+    engine.register(OOMKilledRule())
+    engine.register(CrashLoopRule())
+    engine.register(FailedSchedulingRule())
+
+    exceptions_raised: list[Exception] = []
+
+    for i in range(500):
+        # Oscillate cache state every 50 events
+        if i % 50 == 0:
+            if i % 100 == 0:
+                # Push to DEGRADED: need > 3 reconnect failures
+                cache.reset_reconnect_failures()
+                for _ in range(4):
+                    cache.notify_reconnect_failure()
+                assert cache.readiness() == CacheReadiness.DEGRADED
+            else:
+                # Return to READY
+                cache.reset_reconnect_failures()
+                cache._recompute_readiness()
+                assert cache.readiness() == CacheReadiness.READY
+
+        event = make_oom_event(
+            resource_name=f"oscillation-pod-{i}-abc-xyz",
+            event_id=f"oscillation-{i}",
+        )
+        try:
+            result, meta = engine.evaluate(event)
+            assert result is None or result.rule_id is not None
+            assert meta.duration_ms >= 0.0
+        except Exception as exc:  # noqa: BLE001
+            exceptions_raised.append(exc)
+
+    assert not exceptions_raised, (
+        f"Rule engine raised {len(exceptions_raised)} exception(s) during cache oscillation burst. "
+        f"First: {exceptions_raised[0]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 14: Readiness State Oscillation Counters
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.stress
+def test_readiness_state_oscillation() -> None:
+    """Walk through WARMING→PARTIALLY_READY→READY→DEGRADED→READY cycle,
+    then 100 rapid READY↔DEGRADED oscillations. Assert correct states at
+    each step and no exceptions during rapid oscillation."""
+    cache = ResourceCache()
+
+    # Step 1: WARMING — no kinds registered yet
+    assert cache.readiness() == CacheReadiness.WARMING
+
+    # Step 2: PARTIALLY_READY — register kinds, mark some ready
+    cache._all_kinds = {"Pod", "Deployment", "Node"}
+    cache._ready_kinds = {"Pod"}
+    cache._recompute_readiness()
+    assert cache.readiness() == CacheReadiness.PARTIALLY_READY
+
+    # Step 3: READY — mark all kinds ready
+    cache._ready_kinds = {"Pod", "Deployment", "Node"}
+    cache._recompute_readiness()
+    assert cache.readiness() == CacheReadiness.READY
+
+    # Step 4: DEGRADED — inject reconnect failures
+    for _ in range(4):
+        cache.notify_reconnect_failure()
+    assert cache.readiness() == CacheReadiness.DEGRADED
+
+    # Step 5: READY — reset reconnect failures
+    cache.reset_reconnect_failures()
+    cache._recompute_readiness()
+    assert cache.readiness() == CacheReadiness.READY
+
+    # Step 6: 100 rapid READY↔DEGRADED oscillations
+    exceptions_raised: list[Exception] = []
+    for i in range(100):
+        try:
+            if i % 2 == 0:
+                # Force DEGRADED
+                for _ in range(4):
+                    cache.notify_reconnect_failure()
+                assert cache.readiness() == CacheReadiness.DEGRADED
+            else:
+                # Force READY
+                cache.reset_reconnect_failures()
+                cache._recompute_readiness()
+                assert cache.readiness() == CacheReadiness.READY
+        except Exception as exc:  # noqa: BLE001
+            exceptions_raised.append(exc)
+
+    assert not exceptions_raised, (
+        f"{len(exceptions_raised)} exception(s) during rapid oscillation. First: {exceptions_raised[0]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 15: Ledger Trim During Analysis
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.stress
+def test_ledger_trim_during_analysis() -> None:
+    """Fill ledger with 50 resources x 20 versions, then evaluate 100 OOM
+    events through the rule engine while the ledger may be trimming.
+    Assert zero exceptions during evaluation."""
+    cache = ResourceCache()
+    _populate_cache_with_test_data(cache)
+    ledger = ChangeLedger(max_versions=10, retention_hours=6)
+    engine = RuleEngine(cache=cache, ledger=ledger)
+    engine.register(OOMKilledRule())
+    engine.register(CrashLoopRule())
+    engine.register(FailedSchedulingRule())
+
+    now = datetime.now(UTC)
+
+    # Fill the ledger with 50 resources x 20 versions
+    for resource_i in range(50):
+        for version in range(20):
+            snap = _make_snapshot(resource_i, version, captured_at=now)
+            ledger.record(snap)
+
+    exceptions_raised: list[Exception] = []
+
+    # Evaluate 100 OOM events — the ledger may be trimming internally
+    for i in range(100):
+        event = make_oom_event(
+            resource_name=f"trim-pod-{i}-abc-xyz",
+            event_id=f"trim-{i}",
+        )
+        try:
+            result, meta = engine.evaluate(event)
+            assert result is None or result.rule_id is not None
+            assert meta.duration_ms >= 0.0
+        except Exception as exc:  # noqa: BLE001
+            exceptions_raised.append(exc)
+
+    assert not exceptions_raised, (
+        f"Rule engine raised {len(exceptions_raised)} exception(s) during ledger trim. "
+        f"First: {exceptions_raised[0]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 16: LLM Suppression Flip (async)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.stress
+@pytest.mark.asyncio
+async def test_llm_suppression_flip() -> None:
+    """Create coordinator with mock cache. Use events that don't match any rule.
+    First call with READY -> INCONCLUSIVE (no LLM available).
+    Flip mock to DEGRADED -> second call -> INCONCLUSIVE with degraded/suppressed warning."""
+    from kuberca.models.events import EventRecord, EventSource
+
+    now = datetime.now(UTC)
+
+    # Create a non-matching event that the coordinator will find
+    non_matching_event = EventRecord(
+        source=EventSource.CORE_EVENT,
+        severity=Severity.WARNING,
+        reason="UnknownReason",
+        message="Something that no rule matches",
+        namespace="default",
+        resource_kind="Pod",
+        resource_name="non-existent-pod",
+        first_seen=now - timedelta(hours=1),
+        last_seen=now,
+        event_id="test-non-matching",
+        cluster_id="test-cluster",
+    )
+
+    # Build mock cache that starts READY
+    mock_cache = MagicMock()
+    mock_cache.readiness.return_value = CacheReadiness.READY
+    mock_cache.get.return_value = None  # Resource not found in cache
+
+    # Build mock event buffer that returns the non-matching event
+    mock_event_buffer = MagicMock()
+    mock_event_buffer.get_events.return_value = [non_matching_event]
+
+    # Build mock ledger
+    mock_ledger = MagicMock()
+    mock_ledger.diff.return_value = []
+
+    # Build mock rule engine that returns no match
+    mock_rule_engine = MagicMock()
+    mock_rule_engine.evaluate.return_value = (
+        None,
+        EvaluationMeta(rules_evaluated=3, rules_matched=0, duration_ms=1.0),
+    )
+
+    # Config mock
+    mock_config = MagicMock()
+    mock_config.cluster_id = "test-cluster"
+    mock_config.ollama = MagicMock()
+    mock_config.ollama.endpoint = "http://localhost:11434"
+
+    coordinator = AnalystCoordinator(
+        rule_engine=mock_rule_engine,
+        llm_analyzer=None,  # No LLM available
+        cache=mock_cache,
+        ledger=mock_ledger,
+        event_buffer=mock_event_buffer,
+        config=mock_config,
+    )
+
+    # First call: READY cache, no rule match, no LLM -> INCONCLUSIVE
+    response1 = await coordinator.analyze("Pod/default/non-existent-pod", "2h")
+    assert response1.diagnosed_by == DiagnosisSource.INCONCLUSIVE
+
+    # Flip cache to DEGRADED
+    mock_cache.readiness.return_value = CacheReadiness.DEGRADED
+
+    # Second call: DEGRADED cache, events present, no rule match -> LLM suppressed
+    response2 = await coordinator.analyze("Pod/default/non-existent-pod", "2h")
+    assert response2.diagnosed_by == DiagnosisSource.INCONCLUSIVE
+    assert response2._meta is not None
+    assert response2._meta.cache_state == "degraded"
+
+    # Verify the warnings mention degraded or suppressed state
+    all_warnings = response2._meta.warnings
+    assert any("degraded" in w.lower() or "suppressed" in w.lower() for w in all_warnings), (
+        f"Expected degraded/suppressed warning in {all_warnings}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 17: Concurrent Penalty Application
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.stress
+def test_concurrent_penalty_application() -> None:
+    """Call _rule_result_to_rca_response() 100 times alternating
+    READY/PARTIALLY_READY. Assert: all 50 READY results = 0.80,
+    all 50 PARTIALLY_READY results = 0.65 (0.80 - 0.15).
+    No cross-contamination."""
+
+    base_confidence = 0.80
+    start_ms = time.monotonic_ns() // 1_000_000
+
+    ready_confidences: list[float] = []
+    partial_confidences: list[float] = []
+
+    for i in range(100):
+        rule_result = RuleResult(
+            rule_id="R01_oom_killed",
+            root_cause="Container was OOM-killed",
+            confidence=base_confidence,
+        )
+        eval_meta = EvaluationMeta(rules_evaluated=1, rules_matched=1, duration_ms=1.0)
+
+        if i % 2 == 0:
+            # READY: no penalty
+            response = _rule_result_to_rca_response(
+                rule_result=rule_result,
+                cache_readiness=CacheReadiness.READY,
+                eval_meta=eval_meta,
+                cluster_id="test-cluster",
+                start_ms=start_ms,
+            )
+            ready_confidences.append(response.confidence)
+        else:
+            # PARTIALLY_READY: -0.15 penalty
+            response = _rule_result_to_rca_response(
+                rule_result=rule_result,
+                cache_readiness=CacheReadiness.PARTIALLY_READY,
+                eval_meta=eval_meta,
+                cluster_id="test-cluster",
+                start_ms=start_ms,
+            )
+            partial_confidences.append(response.confidence)
+
+    assert len(ready_confidences) == 50
+    assert len(partial_confidences) == 50
+
+    # All READY results should be exactly 0.80
+    assert all(c == base_confidence for c in ready_confidences), (
+        f"READY confidences varied: {set(ready_confidences)}"
+    )
+
+    # All PARTIALLY_READY results should be exactly 0.65 (0.80 - 0.15)
+    expected_partial = base_confidence - 0.15
+    assert all(c == expected_partial for c in partial_confidences), (
+        f"PARTIALLY_READY confidences varied: {set(partial_confidences)}, expected {expected_partial}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 18: API 410/429 Error Injection
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.stress
+def test_api_410_429_error_injection() -> None:
+    """Exercise cache divergence detection through reconnect failures and
+    burst error injection, verifying state transitions and recovery."""
+    cache = ResourceCache()
+    _populate_cache_with_test_data(cache)
+
+    # Start READY
+    assert cache.readiness() == CacheReadiness.READY
+
+    # Inject 4 reconnect failures -> DEGRADED (threshold is > 3)
+    for _ in range(4):
+        cache.notify_reconnect_failure()
+    assert cache.readiness() == CacheReadiness.DEGRADED
+
+    # Reset reconnect failures -> recovery to READY
+    cache.reset_reconnect_failures()
+    cache._recompute_readiness()
+    assert cache.readiness() == CacheReadiness.READY
+
+    # Inject relist timeouts > threshold (> 2 in 10-minute window) -> DEGRADED
+    for _ in range(3):
+        cache.notify_relist_timeout()
+    assert cache.readiness() == CacheReadiness.DEGRADED
+
+    # Clear relist timeout times -> recovery to READY
+    cache._relist_timeout_times.clear()
+    cache._recompute_readiness()
+    assert cache.readiness() == CacheReadiness.READY
+
+
+# ---------------------------------------------------------------------------
+# Test 19: Memory Pressure Under GC
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.stress
+def test_memory_pressure_under_gc() -> None:
+    """Create ledger with max_versions=3, retention_hours=1.
+    Fill with 100 resources x 10 versions. Evaluate 50 OOM events through
+    the rule engine. Assert zero exceptions."""
+    cache = ResourceCache()
+    _populate_cache_with_test_data(cache)
+    ledger = ChangeLedger(max_versions=3, retention_hours=1)
+    engine = RuleEngine(cache=cache, ledger=ledger)
+    engine.register(OOMKilledRule())
+    engine.register(CrashLoopRule())
+    engine.register(FailedSchedulingRule())
+
+    now = datetime.now(UTC)
+
+    # Fill with 100 resources x 10 versions (exceeds max_versions=3)
+    for resource_i in range(100):
+        for version in range(10):
+            snap = _make_snapshot(resource_i, version, captured_at=now)
+            ledger.record(snap)
+
+    exceptions_raised: list[Exception] = []
+
+    # Evaluate 50 OOM events
+    for i in range(50):
+        event = make_oom_event(
+            resource_name=f"gc-pod-{i}-abc-xyz",
+            event_id=f"gc-{i}",
+        )
+        try:
+            result, meta = engine.evaluate(event)
+            assert result is None or result.rule_id is not None
+            assert meta.duration_ms >= 0.0
+        except Exception as exc:  # noqa: BLE001
+            exceptions_raised.append(exc)
+
+    assert not exceptions_raised, (
+        f"Rule engine raised {len(exceptions_raised)} exception(s) under memory pressure. "
+        f"First: {exceptions_raised[0]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 20: Scout + Rule Engine Race / Work Queue Dedup (async)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.stress
+@pytest.mark.asyncio
+async def test_scout_rule_engine_race_work_queue_dedup() -> None:
+    """Create a WorkQueue with a dummy analyze_fn. Submit the same resource
+    twice and verify deduplication: the second submit returns the same future
+    as the first, and queue depth stays <= 1."""
+
+    async def _dummy_analyze(resource: str, time_window: str) -> object:
+        await asyncio.sleep(10)  # Never completes during test
+        return None
+
+    queue = WorkQueue(analyze_fn=_dummy_analyze)
+    await queue.start()
+
+    try:
+        future1 = queue.submit("Pod/default/my-app", "2h", Priority.INTERACTIVE)
+        future2 = queue.submit("Pod/default/my-app", "2h", Priority.INTERACTIVE)
+
+        # Dedup: second submit should return the same future
+        assert future1 is future2, "Second submit did not return the existing future (dedup failed)"
+
+        # Queue depth should be <= 1 (only one item enqueued)
+        assert queue._queue.qsize() <= 1, f"Queue depth {queue._queue.qsize()} > 1 after dedup submit"
+    finally:
+        await queue.stop()

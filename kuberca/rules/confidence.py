@@ -9,10 +9,15 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
+from kuberca.observability.logging import get_logger
+from kuberca.observability.metrics import invariant_violations_total
+
 if TYPE_CHECKING:
     from kuberca.models.analysis import CorrelationResult
     from kuberca.models.events import EventRecord
     from kuberca.rules.base import Rule
+
+_logger = get_logger("confidence")
 
 _WITHIN_30_MIN = timedelta(minutes=30)
 
@@ -75,4 +80,14 @@ def compute_confidence(
     if is_single_resource(corr):
         score += 0.05
 
-    return min(score, 0.95)
+    result = min(score, 0.95)
+    if result < 0.0 or result > 0.95:
+        _logger.error(
+            "invariant_violated",
+            invariant="INV-C01_confidence_range",
+            value=result,
+            base_confidence=rule.base_confidence,
+        )
+        invariant_violations_total.labels(invariant_name="INV-C01_confidence_range").inc()
+        result = max(0.0, min(result, 0.95))
+    return result

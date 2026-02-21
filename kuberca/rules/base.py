@@ -18,6 +18,7 @@ from kuberca.models.analysis import CorrelationResult, EvaluationMeta, RuleResul
 from kuberca.models.events import EventRecord
 from kuberca.models.resources import CachedResourceView, FieldChange
 from kuberca.observability.logging import get_logger
+from kuberca.observability.metrics import invariant_violations_total
 
 _logger = get_logger("rule_engine")
 
@@ -162,6 +163,19 @@ class RuleEngine:
             warnings=[],
         )
         wall_start = time.monotonic()
+
+        # INV-C03: Verify rule order invariant
+        for i in range(len(self._rules) - 1):
+            a, b = self._rules[i], self._rules[i + 1]
+            if (a.priority, a.rule_id) > (b.priority, b.rule_id):
+                _logger.error(
+                    "invariant_violated",
+                    invariant="INV-C03_rule_order",
+                    rule_a=a.rule_id,
+                    rule_b=b.rule_id,
+                )
+                invariant_violations_total.labels(invariant_name="INV-C03_rule_order").inc()
+                break
 
         # Best candidate found so far
         best: _Candidate | None = None

@@ -95,6 +95,13 @@ cache_state_transitions_total = Counter(
     ["from_state", "to_state"],
 )
 
+# Invariant violation metrics
+invariant_violations_total = Counter(
+    "kuberca_invariant_violations_total",
+    "Total invariant violations detected at runtime (should always be 0)",
+    ["invariant_name"],
+)
+
 # Ledger metrics
 ledger_snapshots = Gauge(
     "kuberca_ledger_snapshots",
