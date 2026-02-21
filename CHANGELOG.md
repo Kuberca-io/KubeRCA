@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Load/stress integration tests (`test_load_stress.py`) — 12 tests validating 1000-event throughput, p95 latency < 500ms, ledger memory bounds, soft trim recovery, deterministic confidence under sustained load
 - Cache state transition Prometheus counter (`kuberca_cache_state_transitions_total`) with `from_state`/`to_state` labels for PromQL-based churn alerting
 - Cache state transition tests (`test_cache_state_transitions.py`) — 10 tests covering all transition paths and no-op stability
+- Invariant protection system:
+  - `INVARIANTS.md` documenting all system invariants (INV-C01 through INV-DT04)
+  - Runtime invariant checks at 4 production boundaries (`compute_confidence`, `_recompute_readiness`, `_rule_result_to_rca_response`, `RuleEngine.evaluate`) — log + metric, never crash
+  - `kuberca_invariant_violations_total` Prometheus counter with `invariant_name` label
+  - Invariant test suite (`test_invariants.py`) — 31 tests covering confidence range, cache state transitions, rule ordering, pure functions, LLM cap, 4-band strategy, competing deps, divergence triggers, analysis pipeline constants
+- Confidence under cache penalties test suite (`test_confidence_under_penalties.py`) — 32 tests proving graceful degradation across READY/PARTIALLY_READY/DEGRADED cache states (rule winner stability, no rule flipping, degradation curve, boundary penalties, post-selection application, 100x replay stability, warning messages)
+- Stress test failure intersections — 8 new scenarios in `test_load_stress.py`: burst+cache oscillation, readiness state oscillation, ledger trim during analysis, LLM suppression flip, concurrent penalty application, API error injection, memory pressure under GC, work queue dedup race
+- Test count increased from 1536 to 1607 (+71 tests)
 
 ### Fixed
 
