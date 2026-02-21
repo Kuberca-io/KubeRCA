@@ -14,6 +14,7 @@ Targets uncovered lines identified in the coverage report:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 from collections import deque
 from datetime import UTC, datetime, timedelta
@@ -22,13 +23,17 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# ---------------------------------------------------------------------------
-# Module 1: resource_cache.py
-# ---------------------------------------------------------------------------
-
+from kuberca.analyst.queue import Priority, WorkQueue, _WorkItem
+from kuberca.cache.redaction import (
+    _is_valid_base64_string,
+    _redact_command_arg,
+    _redact_env_entry,
+    _redact_list,
+    redacted_json,
+)
 from kuberca.cache.resource_cache import ResourceCache, _get_list_func
-from kuberca.models.resources import CacheReadiness
-
+from kuberca.ledger.change_ledger import _FAILSAFE_LIMIT_BYTES, _HARD_LIMIT_BYTES, _SOFT_LIMIT_BYTES, ChangeLedger
+from kuberca.models.resources import CacheReadiness, ResourceSnapshot
 
 # ---------------------------------------------------------------------------
 # Helpers shared across resource-cache tests
@@ -526,9 +531,6 @@ class TestGetListFunc:
 # Module 2: change_ledger.py
 # ---------------------------------------------------------------------------
 
-from kuberca.ledger.change_ledger import ChangeLedger, _FAILSAFE_LIMIT_BYTES, _HARD_LIMIT_BYTES, _SOFT_LIMIT_BYTES
-from kuberca.models.resources import ResourceSnapshot
-
 
 def _snap(
     kind: str = "Deployment",
@@ -611,10 +613,6 @@ class TestSoftTrim:
 
     def test_soft_trim_increments_metrics(self) -> None:
         """_soft_trim() increments ledger_trim_events_total and ledger_memory_pressure_total."""
-        from collections import deque
-
-        from kuberca.observability.metrics import ledger_memory_pressure_total, ledger_trim_events_total
-
         ledger = ChangeLedger()
         key = ("Pod", "default", "pod-a")
         ledger._buffers[key] = deque(maxlen=5)
@@ -736,10 +734,8 @@ class TestRecordMemoryPressure:
                 ledger, "_estimate_memory_bytes", return_value=0
             ).__enter__()
             # Simplify: just check evict is called
-            try:
+            with contextlib.suppress(Exception):
                 ledger.record(_snap())
-            except Exception:
-                pass
             mock_evict.assert_called_once()
 
     def test_record_at_hard_limit_drops_snapshot_silently(self) -> None:
@@ -801,15 +797,6 @@ class TestRecordMemoryPressure:
 # ---------------------------------------------------------------------------
 # Module 3: redaction.py
 # ---------------------------------------------------------------------------
-
-from kuberca.cache.redaction import (
-    _is_valid_base64_string,
-    _redact_command_arg,
-    _redact_env_entry,
-    _redact_list,
-    redacted_json,
-    redact_dict,
-)
 
 
 # ---------------------------------------------------------------------------
@@ -987,8 +974,6 @@ class TestRedactedJson:
 # ---------------------------------------------------------------------------
 # Module 4: queue.py
 # ---------------------------------------------------------------------------
-
-from kuberca.analyst.queue import Priority, QueueFullError, WorkQueue, _WorkItem
 
 
 # ---------------------------------------------------------------------------
