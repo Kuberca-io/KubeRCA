@@ -8,7 +8,7 @@
 # Prerequisites:
 #   - Docker Desktop with Kubernetes enabled
 #   - kubectl, helm, curl, and jq on PATH
-#   - KubeRCA Docker image built: docker build -t kuberca:0.1.1 .
+#   - KubeRCA Docker image built: docker build -t kuberca:${VERSION} .
 #
 # Usage:
 #   ./e2e/run_e2e.sh          # full run (deploy + test + cleanup)
@@ -16,6 +16,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+VERSION=$(grep '^version' "$REPO_ROOT/pyproject.toml" | head -1 | sed 's/.*= *"\(.*\)"/\1/')
 NS="kuberca-e2e"
 HELM_RELEASE="kuberca"
 PORT_FORWARD_PID=""
@@ -95,12 +97,12 @@ fi
 _log "Kubernetes cluster reachable"
 
 # Verify Docker image exists
-if ! docker image inspect kuberca:0.1.1 >/dev/null 2>&1; then
-    _log "ERROR: Docker image 'kuberca:0.1.1' not found."
-    _log "  Build it first:  docker build -t kuberca:0.1.1 ."
+if ! docker image inspect kuberca:${VERSION} >/dev/null 2>&1; then
+    _log "ERROR: Docker image 'kuberca:${VERSION}' not found."
+    _log "  Build it first:  docker build -t kuberca:${VERSION} ."
     exit 1
 fi
-_log "Docker image kuberca:0.1.1 found"
+_log "Docker image kuberca:${VERSION} found"
 
 # ── Step 1: Create namespace ───────────────────────────────────────────────
 
