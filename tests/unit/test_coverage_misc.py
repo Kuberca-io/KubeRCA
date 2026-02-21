@@ -831,9 +831,6 @@ class TestMCPServerStart:
         mock_read = AsyncMock()
         mock_write = AsyncMock()
 
-        async def _fake_stdio():
-            return mock_read, mock_write
-
         with (
             patch("kuberca.mcp.server.stdio_server") as mock_stdio,
             patch.object(server._server, "run", new=AsyncMock()) as mock_run,

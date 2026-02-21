@@ -30,7 +30,6 @@ from kuberca.rules.confidence import compute_confidence
 # ---------------------------------------------------------------------------
 
 _NOW = datetime(2026, 2, 21, 12, 0, 0, tzinfo=UTC)
-_15_MIN_AGO = _NOW - timedelta(minutes=15)
 
 
 def _make_event(
@@ -726,3 +725,113 @@ class TestAnalysisInvariants:
 
         source = inspect.getsource(AnalystCoordinator.analyze)
         assert "min(llm_result.confidence, 0.35)" in source
+
+
+# ---------------------------------------------------------------------------
+# Runtime invariant violation path coverage
+# ---------------------------------------------------------------------------
+
+
+class TestRuntimeInvariantViolationPaths:
+    """Tests that exercise the runtime invariant violation logging/metric paths.
+
+    These paths should never fire in production, but we verify the guard
+    code works correctly when invariants are violated.
+    """
+
+    def test_inv_c01_negative_base_confidence_triggers_violation(self) -> None:
+        """INV-C01: A rule with negative base_confidence triggers the violation guard."""
+        rule = MagicMock()
+        rule.base_confidence = -0.5
+        event = _make_event()
+        corr = CorrelationResult(objects_queried=0, duration_ms=0.0)
+        with patch("kuberca.rules.confidence._logger") as mock_logger:
+            result = compute_confidence(rule, corr, event)
+            mock_logger.error.assert_called_once()
+            call_kwargs = mock_logger.error.call_args
+            assert "INV-C01" in str(call_kwargs)
+        assert 0.0 <= result <= 0.95
+
+    def test_inv_c01_score_above_095_triggers_violation(self) -> None:
+        """INV-C01: A rule with base_confidence > 0.95 triggers the violation guard."""
+        rule = MagicMock()
+        rule.base_confidence = 1.0
+        event = _make_event()
+        corr = CorrelationResult(
+            changes=[FieldChange(field_path="spec.replicas", old_value="1", new_value="2", changed_at=_NOW)],
+            objects_queried=1,
+            duration_ms=1.0,
+        )
+        with patch("kuberca.rules.confidence._logger") as mock_logger:
+            result = compute_confidence(rule, corr, event)
+            mock_logger.error.assert_called_once()
+        assert result == 0.95  # Clamped
+
+    def test_inv_c02_negative_confidence_triggers_violation(self) -> None:
+        """INV-C02: A very low raw confidence with penalty goes negative, triggering guard."""
+        from kuberca.analyst.coordinator import _rule_result_to_rca_response
+
+        rule_result = RuleResult(
+            rule_id="R01",
+            root_cause="OOMKilled",
+            confidence=0.05,
+            evidence=[],
+            affected_resources=[],
+        )
+        eval_meta = EvaluationMeta()
+        with patch("kuberca.analyst.coordinator._logger") as mock_logger:
+            response = _rule_result_to_rca_response(
+                rule_result, CacheReadiness.DEGRADED, eval_meta, "test-cluster", 0
+            )
+            # DEGRADED applies -0.10 penalty: 0.05 - 0.10 = -0.05 → triggers violation
+            mock_logger.error.assert_called_once()
+            call_kwargs = mock_logger.error.call_args
+            assert "INV-C02" in str(call_kwargs)
+        assert response.confidence == 0.0  # Clamped to floor
+
+    def test_inv_c03_unsorted_rules_triggers_violation(self) -> None:
+        """INV-C03: Rules in wrong order triggers the violation guard."""
+        rule_a = MagicMock(spec=Rule)
+        rule_a.priority = 2
+        rule_a.rule_id = "R02"
+        rule_a.match.return_value = False
+
+        rule_b = MagicMock(spec=Rule)
+        rule_b.priority = 1
+        rule_b.rule_id = "R01"
+        rule_b.match.return_value = False
+
+        cache = MagicMock()
+        ledger = MagicMock()
+        engine = RuleEngine(cache=cache, ledger=ledger)
+        # Force wrong order by bypassing register()
+        engine._rules = [rule_a, rule_b]
+
+        event = _make_event()
+
+        with patch("kuberca.rules.base._logger") as mock_logger:
+            engine.evaluate(event)
+            mock_logger.error.assert_called_once()
+            call_kwargs = mock_logger.error.call_args
+            assert "INV-C03" in str(call_kwargs)
+
+    def test_inv_cs01_invalid_transition_triggers_violation(self) -> None:
+        """INV-CS01: An invalid cache state transition triggers the violation guard."""
+        cache = ResourceCache()
+
+        # Force cache to READY state with kinds registered
+        cache._all_kinds = {"Pod", "Deployment"}
+        cache._ready_kinds = {"Pod", "Deployment"}
+        cache._readiness = CacheReadiness.READY
+
+        # To reach the INV-CS01 check (line 584), we need the code path at
+        # lines 556-570 (not the early returns). Set _all_kinds non-empty,
+        # _is_diverged() False, and _ready_kinds empty → goes to WARMING.
+        with patch.object(cache, "_log") as mock_log:
+            cache._ready_kinds = set()  # No kinds ready → WARMING
+            cache._recompute_readiness()
+            # READY → WARMING is invalid and should trigger violation
+            error_calls = [
+                c for c in mock_log.error.call_args_list if "invariant_violated" in str(c)
+            ]
+            assert len(error_calls) > 0, "Expected INV-CS01 violation for READY → WARMING"

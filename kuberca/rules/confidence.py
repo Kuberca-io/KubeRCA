@@ -81,11 +81,11 @@ def compute_confidence(
         score += 0.05
 
     result = min(score, 0.95)
-    if result < 0.0 or result > 0.95:
+    if score < 0.0 or score > 0.95:
         _logger.error(
             "invariant_violated",
             invariant="INV-C01_confidence_range",
-            value=result,
+            value=score,
             base_confidence=rule.base_confidence,
         )
         invariant_violations_total.labels(invariant_name="INV-C01_confidence_range").inc()

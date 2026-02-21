@@ -37,7 +37,6 @@ from kuberca.rules.r11_failedmount_configmap import FailedMountConfigMapRule
 
 _NOW = datetime(2026, 2, 21, 10, 0, 0, tzinfo=UTC)
 _15_MIN_AGO = _NOW - timedelta(minutes=15)
-_1H_AGO = _NOW - timedelta(hours=1)
 
 
 # ---------------------------------------------------------------------------
