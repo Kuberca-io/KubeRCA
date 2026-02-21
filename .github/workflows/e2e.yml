@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t kuberca:0.1.1 .
+        run: docker build -t kuberca:0.1.2 .
 
       - name: Create kind cluster
         uses: helm/kind-action@v1
@@ -27,7 +27,7 @@ jobs:
           cluster_name: kuberca-e2e
 
       - name: Load image into kind
-        run: kind load docker-image kuberca:0.1.1 --name kuberca-e2e
+        run: kind load docker-image kuberca:0.1.2 --name kuberca-e2e
 
       - name: Install Helm
         uses: azure/setup-helm@v4

@@ -1,6 +1,6 @@
 [project]
 name = "kuberca"
-version = "0.1.1"
+version = "0.1.2"
 description = "Kubernetes Root Cause Analysis System"
 readme = {text = "KubeRCA - Kubernetes Root Cause Analysis System", content-type = "text/plain"}
 requires-python = ">=3.12"

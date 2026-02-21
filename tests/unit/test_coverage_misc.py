@@ -360,7 +360,7 @@ def _make_rca_response_model() -> object:
         affected_resources=[AffectedResource(kind="Pod", namespace="default", name="api")],
         suggested_remediation="fix image tag",
         _meta=ResponseMeta(
-            kuberca_version="0.1.1",
+            kuberca_version="0.1.2",
             schema_version="1",
             cluster_id="",
             timestamp="2026-01-01T00:00:01Z",

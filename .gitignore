@@ -91,6 +91,9 @@ images/*.png
 images/*.jpg
 images/*.jpeg
 
+# plans (local-only)
+docs/plans/
+
 # ai
 .claude
 .dirigent

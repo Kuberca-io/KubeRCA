@@ -83,9 +83,9 @@ class TestClusterStatus:
 
 class TestHealthStatus:
     def test_fields_are_present(self) -> None:
-        hs = HealthStatus(status="ok", version="0.1.1", cache_state="ready")
+        hs = HealthStatus(status="ok", version="0.1.2", cache_state="ready")
         assert hs.status == "ok"
-        assert hs.version == "0.1.1"
+        assert hs.version == "0.1.2"
         assert hs.cache_state == "ready"
 
 

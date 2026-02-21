@@ -1,11 +1,11 @@
-# KubeRCA v0.1.2 (Unreleased)
+# KubeRCA v0.1.2
 
-Test coverage release — 97% unit test coverage.
+Test hardening release — 97% unit test coverage, invariant protection, confidence penalty verification, and stress intersection testing.
 
 ## Testing
 
 - **Test coverage increased from 85% to 97%** (5624 statements, 189 missed)
-- **1353 tests** (up from 1007)
+- **1607 tests** (up from 1036)
 - 5 new test files covering:
   - App lifecycle startup methods (K8s client, cache, ledger, collectors, coordinator, queue, scout, REST, MCP)
   - Analyst coordinator internal helpers (status event synthesis, state context, blast radius, warming/degraded warnings)
@@ -13,10 +13,63 @@ Test coverage release — 97% unit test coverage.
   - ResourceCache populate/ingest, ChangeLedger memory pressure (soft trim, failsafe eviction), redaction edge cases, WorkQueue rate limiting
   - CLI HTTP helpers, API route error paths, dependency graph edge cases, MCP tool handlers, logging setup
 - Tier 1 rule tests — comprehensive match/correlate/explain coverage for OOMKilled, CrashLoopBackOff, FailedScheduling
+- Confidence stability tests — 29 tests proving rule engine determinism (competing rule pairs, 100-replay stability, 1000-call idempotency, band transition logic)
+
+## Invariant Protection
+
+- **`INVARIANTS.md`** — living document codifying all system invariants (INV-C01 through INV-DT04)
+- **Runtime invariant checks** at 4 production boundaries (`compute_confidence`, `_recompute_readiness`, `_rule_result_to_rca_response`, `RuleEngine.evaluate`) — log + metric, never crash
+- **`kuberca_invariant_violations_total`** Prometheus counter with `invariant_name` label (should always be 0)
+- **31 invariant tests** covering confidence range, cache state transitions, rule ordering, pure functions, LLM cap, 4-band strategy, competing deps, divergence triggers, analysis pipeline constants
+
+## Confidence Under Cache Penalties
+
+- **32 tests** proving the same incident degrades gracefully across READY/PARTIALLY_READY/DEGRADED cache states
+- Rule winner stability — same rule wins regardless of cache state
+- No rule flipping — medium-band results don't change rule selection under penalty
+- Graceful degradation curve — confidence: READY > PARTIALLY_READY > DEGRADED (0.0)
+- Penalty applied post-selection — rule engine runs on raw scores; penalty only affects reported confidence
+- 100x replay stability — each scenario replayed 100 times with identical results
+
+## Stress Test Failure Intersections
+
+- **8 new stress scenarios** testing real failure mode combinations:
+  - Burst + cache oscillation (500 events, READY/DEGRADED every 50)
+  - Readiness state oscillation (rapid 10ms transitions)
+  - Ledger trim during concurrent analysis
+  - LLM suppression flip mid-analysis
+  - Concurrent penalty application (100 simultaneous coordinator calls)
+  - API 410/429 error injection with divergence recovery
+  - Memory pressure under GC (failsafe eviction under concurrent load)
+  - Work queue dedup race (scout + rule engine on same resource)
 
 ## Fixed
 
 - Replace deprecated `datetime.utcnow()` with `datetime.now(tz=UTC)` across watcher, ledger, diff, and models
+
+## Install
+
+### Helm (GitHub Pages)
+
+```bash
+helm repo add kuberca https://kubeRCA-io.github.io/KubeRCA
+helm install kuberca kuberca/kuberca --namespace kuberca --create-namespace
+```
+
+### Helm (OCI)
+
+```bash
+helm install kuberca oci://ghcr.io/kuberca-io/charts/kuberca \
+  --version 0.1.2 --namespace kuberca --create-namespace
+```
+
+### Docker
+
+```bash
+docker pull ghcr.io/kuberca-io/kuberca:0.1.2
+# or
+docker pull kuberca/kuberca:0.1.2
+```
 
 ---
 

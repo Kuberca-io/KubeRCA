@@ -37,7 +37,7 @@ def _make_rca_response(
 ) -> RCAResponse:
     meta = (
         ResponseMeta(
-            kuberca_version="0.1.1",
+            kuberca_version="0.1.2",
             schema_version="1",
             cluster_id="test-cluster",
             timestamp="2026-02-20T10:00:00Z",
@@ -401,7 +401,7 @@ class TestRcaResponseToDict:
 
         assert "_meta" in result
         meta = result["_meta"]
-        assert meta["kuberca_version"] == "0.1.1"
+        assert meta["kuberca_version"] == "0.1.2"
         assert meta["schema_version"] == "1"
         assert meta["cluster_id"] == "test-cluster"
         assert meta["timestamp"] == "2026-02-20T10:00:00Z"
@@ -607,7 +607,7 @@ class TestRcaResponseToDict:
             confidence=0.5,
             diagnosed_by=DiagnosisSource.RULE_ENGINE,
             _meta=ResponseMeta(
-                kuberca_version="0.1.1",
+                kuberca_version="0.1.2",
                 warnings=["LLM unavailable", "cache degraded"],
             ),
         )

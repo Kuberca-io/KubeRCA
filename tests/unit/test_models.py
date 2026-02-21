@@ -357,23 +357,23 @@ class TestRCAResponse:
 
 class TestResponseMeta:
     def test_construction(self) -> None:
-        meta = ResponseMeta(kuberca_version="0.1.1")
-        assert meta.kuberca_version == "0.1.1"
+        meta = ResponseMeta(kuberca_version="0.1.2")
+        assert meta.kuberca_version == "0.1.2"
 
     def test_schema_version_defaults_to_1(self) -> None:
-        meta = ResponseMeta(kuberca_version="0.1.1")
+        meta = ResponseMeta(kuberca_version="0.1.2")
         assert meta.schema_version == "1"
 
     def test_warnings_defaults_to_empty_list(self) -> None:
-        meta = ResponseMeta(kuberca_version="0.1.1")
+        meta = ResponseMeta(kuberca_version="0.1.2")
         assert meta.warnings == []
 
     def test_cache_state_defaults_to_ready(self) -> None:
-        meta = ResponseMeta(kuberca_version="0.1.1")
+        meta = ResponseMeta(kuberca_version="0.1.2")
         assert meta.cache_state == "ready"
 
     def test_cluster_id_defaults_to_empty_string(self) -> None:
-        meta = ResponseMeta(kuberca_version="0.1.1")
+        meta = ResponseMeta(kuberca_version="0.1.2")
         assert meta.cluster_id == ""
 
 

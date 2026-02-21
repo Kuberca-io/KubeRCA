@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+[Unreleased]: https://github.com/KubeRCA-io/KubeRCA/compare/v0.1.2...HEAD
+
+## [0.1.2] - 2026-02-22
+
 ### Added
 
-- Test coverage increased from 85% to 97% (1007 → 1536 tests)
+- Test coverage increased from 85% to 97% (1007 → 1607 tests)
 - 5 new test files:
   - `test_app_startup.py` — 68 tests for app lifecycle startup methods
   - `test_coordinator_helpers.py` — 75 tests for analyst coordinator internal helpers
@@ -29,13 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Invariant test suite (`test_invariants.py`) — 31 tests covering confidence range, cache state transitions, rule ordering, pure functions, LLM cap, 4-band strategy, competing deps, divergence triggers, analysis pipeline constants
 - Confidence under cache penalties test suite (`test_confidence_under_penalties.py`) — 32 tests proving graceful degradation across READY/PARTIALLY_READY/DEGRADED cache states (rule winner stability, no rule flipping, degradation curve, boundary penalties, post-selection application, 100x replay stability, warning messages)
 - Stress test failure intersections — 8 new scenarios in `test_load_stress.py`: burst+cache oscillation, readiness state oscillation, ledger trim during analysis, LLM suppression flip, concurrent penalty application, API error injection, memory pressure under GC, work queue dedup race
-- Test count increased from 1536 to 1607 (+71 tests)
 
 ### Fixed
 
 - Replace deprecated `datetime.utcnow()` with `datetime.now(tz=UTC)` across watcher, ledger, diff, and models
 
-[Unreleased]: https://github.com/KubeRCA-io/KubeRCA/compare/v0.1.1...HEAD
+[0.1.2]: https://github.com/KubeRCA-io/KubeRCA/compare/v0.1.1...v0.1.2
 
 ## [0.1.1] - 2026-02-20
 

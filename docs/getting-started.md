@@ -17,21 +17,21 @@ KubeRCA runs on any Kubernetes cluster. The image loading step differs by enviro
 | Environment | Image Loading |
 |------------|---------------|
 | **Docker Desktop** | Images are shared automatically -- no extra steps needed |
-| **kind** | `kind load docker-image kuberca:0.1.1` |
-| **minikube** | `minikube image load kuberca:0.1.1` |
+| **kind** | `kind load docker-image kuberca:0.1.2` |
+| **minikube** | `minikube image load kuberca:0.1.2` |
 
 ## 2. Build the Docker Image
 
 ```bash
 git clone https://github.com/KubeRCA-io/KubeRCA.git
 cd KubeRCA
-docker build -t kuberca:0.1.1 .
+docker build -t kuberca:0.1.2 .
 ```
 
 If using **kind**, load the image into the cluster:
 
 ```bash
-kind load docker-image kuberca:0.1.1
+kind load docker-image kuberca:0.1.2
 ```
 
 ## 3. Install via Helm
@@ -68,7 +68,7 @@ Expected output:
 ```json
 {
   "status": "ok",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "cache_state": "ready"
 }
 ```

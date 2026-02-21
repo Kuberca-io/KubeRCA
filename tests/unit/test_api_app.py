@@ -33,7 +33,7 @@ def _make_rca_response() -> RCAResponse:
         affected_resources=[AffectedResource(kind="Pod", namespace="default", name="api-pod")],
         suggested_remediation="Fix the image tag in the Deployment spec.",
         _meta=ResponseMeta(
-            kuberca_version="0.1.1",
+            kuberca_version="0.1.2",
             schema_version="1",
             cluster_id="test-cluster",
             timestamp="2024-01-15T10:30:01Z",

@@ -52,7 +52,7 @@ def _rca_response() -> dict[object, object]:
         "affected_resources": [{"kind": "Pod", "namespace": "default", "name": "api-pod"}],
         "suggested_remediation": "Fix the image tag.",
         "meta": {
-            "kuberca_version": "0.1.1",
+            "kuberca_version": "0.1.2",
             "schema_version": "1",
             "cluster_id": "",
             "timestamp": "2024-01-15T10:30:01Z",

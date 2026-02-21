@@ -135,7 +135,7 @@ KIND_ALIASES: dict[str, str] = {
 _TIME_WINDOW_RE = re.compile(r"^([0-9]+)(m|h|d)$")
 _DNS_SUBDOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9\-\.]{0,251}[a-z0-9])?$")
 
-_KUBERCA_VERSION = "0.1.1"
+_KUBERCA_VERSION = "0.1.2"
 _SCHEMA_VERSION = "1"
 
 
