@@ -1,3 +1,25 @@
+# KubeRCA v0.1.2 (Unreleased)
+
+Test coverage release — 97% unit test coverage.
+
+## Testing
+
+- **Test coverage increased from 85% to 97%** (5624 statements, 189 missed)
+- **1353 tests** (up from 1007)
+- 5 new test files covering:
+  - App lifecycle startup methods (K8s client, cache, ledger, collectors, coordinator, queue, scout, REST, MCP)
+  - Analyst coordinator internal helpers (status event synthesis, state context, blast radius, warming/degraded warnings)
+  - BaseWatcher reconnection, relist, rate limiting, backoff, and pod-only fallback
+  - ResourceCache populate/ingest, ChangeLedger memory pressure (soft trim, failsafe eviction), redaction edge cases, WorkQueue rate limiting
+  - CLI HTTP helpers, API route error paths, dependency graph edge cases, MCP tool handlers, logging setup
+- Tier 1 rule tests — comprehensive match/correlate/explain coverage for OOMKilled, CrashLoopBackOff, FailedScheduling
+
+## Fixed
+
+- Replace deprecated `datetime.utcnow()` with `datetime.now(tz=UTC)` across watcher, ledger, diff, and models
+
+---
+
 # KubeRCA v0.1.1
 
 Security patch and test-coverage release.

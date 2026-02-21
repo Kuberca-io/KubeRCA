@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Test coverage increased from 85% to 97% (1007 → 1353 tests)
+- 5 new test files:
+  - `test_app_startup.py` — 68 tests for app lifecycle startup methods
+  - `test_coordinator_helpers.py` — 75 tests for analyst coordinator internal helpers
+  - `test_watcher_base.py` — 55 tests for BaseWatcher reconnection, relist, and backoff logic
+  - `test_coverage_boost.py` — 69 tests for ResourceCache, ChangeLedger, redaction engine, WorkQueue
+  - `test_coverage_misc.py` — 79 tests for CLI, API routes, dependency graph, MCP server, logging
+- Tier 1 rule tests (`test_rules_r01_r03.py`) — comprehensive match/correlate/explain coverage for OOMKilled, CrashLoopBackOff, FailedScheduling
+
+### Fixed
+
+- Replace deprecated `datetime.utcnow()` with `datetime.now(tz=UTC)` across watcher, ledger, diff, and models
+
+[Unreleased]: https://github.com/KubeRCA-io/KubeRCA/compare/v0.1.1...HEAD
+
 ## [0.1.1] - 2026-02-20
 
 ### Security
