@@ -2,9 +2,20 @@
 name = "kuberca"
 version = "0.1.2"
 description = "Kubernetes Root Cause Analysis System"
-readme = {text = "KubeRCA - Kubernetes Root Cause Analysis System", content-type = "text/plain"}
+readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed",
+]
 authors = [{ name = "IaM DEV" }]
 
 dependencies = [
@@ -33,6 +44,13 @@ dev = [
 
 [project.scripts]
 kuberca = "kuberca.cli.main:cli"
+
+[project.urls]
+Homepage = "https://kuberca.io"
+Repository = "https://github.com/KubeRCA-io/KubeRCA"
+Documentation = "https://github.com/KubeRCA-io/KubeRCA#readme"
+Issues = "https://github.com/KubeRCA-io/KubeRCA/issues"
+Changelog = "https://github.com/KubeRCA-io/KubeRCA/releases"
 
 [build-system]
 requires = ["hatchling"]

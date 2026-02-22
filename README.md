@@ -17,6 +17,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
   <a href="https://kubeRCA-io.github.io/KubeRCA"><img src="https://img.shields.io/badge/Helm-v0.1.2-blue" alt="Helm"></a>
   <a href="https://github.com/KubeRCA-io/KubeRCA/pkgs/container/kuberca"><img src="https://img.shields.io/badge/Docker-ghcr.io-blue" alt="Docker"></a>
+  <a href="https://pypi.org/project/kuberca/"><img src="https://img.shields.io/pypi/v/kuberca" alt="PyPI"></a>
   <img src="https://img.shields.io/badge/python-%3E%3D3.12-blue" alt="Python >= 3.12">
   <a href="https://codecov.io/gh/KubeRCA-io/KubeRCA"><img src="https://codecov.io/gh/KubeRCA-io/KubeRCA/graph/badge.svg" alt="codecov"></a>
 </p>
@@ -90,6 +91,12 @@ docker pull ghcr.io/kuberca-io/kuberca:0.1.2
 
 # Docker Hub
 docker pull kuberca/kuberca:0.1.2
+```
+
+### pip
+
+```bash
+pip install kuberca
 ```
 
 For a complete walkthrough, see the [Getting Started guide](docs/getting-started.md).
