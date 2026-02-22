@@ -8,8 +8,8 @@ assignees: ''
 
 ## Environment
 
-- **KubeRCA version**: (e.g., 0.1.2)
-- **Helm chart version**: (e.g., 0.1.2)
+- **KubeRCA version**: (e.g., 0.1.3)
+- **Helm chart version**: (e.g., 0.1.3)
 - **Kubernetes version**: (e.g., 1.29.2)
 - **Kubernetes distribution**: (e.g., EKS, GKE, AKS, k3s, minikube)
 - **Deployment method**: (Helm / Docker / other)

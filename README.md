@@ -15,7 +15,7 @@
   <a href="https://github.com/KubeRCA-io/KubeRCA/actions/workflows/docker-publish.yml"><img src="https://github.com/KubeRCA-io/KubeRCA/actions/workflows/docker-publish.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/KubeRCA-io/KubeRCA/releases"><img src="https://img.shields.io/github/v/release/KubeRCA-io/KubeRCA" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
-  <a href="https://kubeRCA-io.github.io/KubeRCA"><img src="https://img.shields.io/badge/Helm-v0.1.2-blue" alt="Helm"></a>
+  <a href="https://kubeRCA-io.github.io/KubeRCA"><img src="https://img.shields.io/badge/Helm-chart-blue" alt="Helm"></a>
   <a href="https://github.com/KubeRCA-io/KubeRCA/pkgs/container/kuberca"><img src="https://img.shields.io/badge/Docker-ghcr.io-blue" alt="Docker"></a>
   <a href="https://pypi.org/project/kuberca/"><img src="https://img.shields.io/pypi/v/kuberca" alt="PyPI"></a>
   <img src="https://img.shields.io/badge/python-%3E%3D3.12-blue" alt="Python >= 3.12">
@@ -80,17 +80,17 @@ helm install kuberca kuberca/kuberca --namespace kuberca --create-namespace
 
 ```bash
 helm install kuberca oci://ghcr.io/kuberca-io/charts/kuberca \
-  --version 0.1.2 --namespace kuberca --create-namespace
+  --version <version> --namespace kuberca --create-namespace
 ```
 
 ### Docker
 
 ```bash
 # GitHub Container Registry
-docker pull ghcr.io/kuberca-io/kuberca:0.1.2
+docker pull ghcr.io/kuberca-io/kuberca:<version>
 
 # Docker Hub
-docker pull kuberca/kuberca:0.1.2
+docker pull kuberca/kuberca:<version>
 ```
 
 ### pip
@@ -189,7 +189,7 @@ curl -X POST http://localhost:8080/api/v1/analyze \
   ],
   "suggested_remediation": "Increase the container memory limit. Check application memory usage patterns and consider setting requests equal to limits to avoid unexpected OOM kills.",
   "meta": {
-    "kuberca_version": "0.1.2",
+    "kuberca_version": "0.1.3",
     "schema_version": "1.0",
     "cluster_id": "prod-us-east-1",
     "timestamp": "2025-01-15T10:32:45Z",
@@ -244,7 +244,7 @@ Print the KubeRCA version and exit.
 
 ```bash
 $ kuberca version
-kuberca 0.1.2
+kuberca 0.1.3
 ```
 
 #### `kuberca status [--namespace NS] [--json]`

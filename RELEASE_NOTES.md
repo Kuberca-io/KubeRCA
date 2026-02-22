@@ -1,3 +1,47 @@
+# KubeRCA v0.1.3
+
+Dynamic versioning and release automation.
+
+## Release Automation
+
+- **Dynamic versioning via `hatch-vcs`** — package version is derived from git tags (`v0.2.0` tag → `0.2.0` on PyPI). No manual version bumps needed.
+- **PyPI publish workflow** fetches full git history so `hatch-vcs` can read tags
+- **Docker build workflow** extracts version from tag and passes it as `SETUPTOOLS_SCM_PRETEND_VERSION` build arg
+- **Dockerfile** accepts version build arg for OCI label (fixes stale `0.1.1` label)
+- `kuberca.__version__` now reads from `importlib.metadata` at runtime
+
+## Install
+
+### Helm (GitHub Pages)
+
+```bash
+helm repo add kuberca https://kubeRCA-io.github.io/KubeRCA
+helm install kuberca kuberca/kuberca --namespace kuberca --create-namespace
+```
+
+### Helm (OCI)
+
+```bash
+helm install kuberca oci://ghcr.io/kuberca-io/charts/kuberca \
+  --version 0.1.3 --namespace kuberca --create-namespace
+```
+
+### Docker
+
+```bash
+docker pull ghcr.io/kuberca-io/kuberca:0.1.3
+# or
+docker pull kuberca/kuberca:0.1.3
+```
+
+### pip
+
+```bash
+pip install kuberca
+```
+
+---
+
 # KubeRCA v0.1.2
 
 Test hardening release — 97% unit test coverage, invariant protection, confidence penalty verification, and stress intersection testing.

@@ -93,6 +93,11 @@ images/*.jpeg
 
 # plans (local-only)
 docs/plans/
+docs/launch/
+
+
+# generated version file (hatch-vcs)
+kuberca/_version.py
 
 # ai
 .claude

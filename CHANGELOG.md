@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Package version is now derived automatically from git tags via `hatch-vcs` — no manual version bumps in `pyproject.toml` needed
+- `kuberca.__version__` reads from `importlib.metadata` at runtime instead of a hardcoded string
+- Docker image OCI version label injected via `SETUPTOOLS_SCM_PRETEND_VERSION` build arg
+- PyPI publish workflow fetches full git history for tag-based versioning
+
 [Unreleased]: https://github.com/KubeRCA-io/KubeRCA/compare/v0.1.2...HEAD
 
 ## [0.1.2] - 2026-02-22

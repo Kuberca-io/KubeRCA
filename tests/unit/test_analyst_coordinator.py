@@ -296,7 +296,9 @@ class TestAnalystCoordinatorDecisionFlow:
         coordinator = _make_coordinator(rule_result=rule_result)
         response = await coordinator.analyze("pod/default/my-pod")
         assert response._meta is not None
-        assert response._meta.kuberca_version == "0.1.2"
+        from kuberca import __version__
+
+        assert response._meta.kuberca_version == __version__
         assert response._meta.schema_version == "1"
         assert response._meta.cluster_id == "test-cluster"
         assert response._meta.cache_state == "ready"

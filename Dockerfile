@@ -16,6 +16,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /build
 
+# Allow injecting the version when .git is not available in the Docker context.
+ARG SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}
+
 # Install uv — the fast Python package installer / resolver.
 # Pin to a specific version so the build is reproducible.
 RUN pip install --no-cache-dir uv==0.6.1
@@ -41,9 +45,11 @@ RUN uv sync --active --frozen --no-dev
 # ─────────────────────────────────────────────────────────────────────────────
 FROM python:3.12-alpine AS runtime
 
+ARG SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0
+
 LABEL org.opencontainers.image.title="KubeRCA" \
       org.opencontainers.image.description="Kubernetes Root Cause Analysis System" \
-      org.opencontainers.image.version="0.1.1" \
+      org.opencontainers.image.version="${SETUPTOOLS_SCM_PRETEND_VERSION}" \
       org.opencontainers.image.source="https://github.com/kuberca-io/kuberca" \
       org.opencontainers.image.licenses="Apache-2.0"
 

@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 import structlog
 
+from kuberca import __version__
 from kuberca.llm.evidence import EvidencePackage
 from kuberca.models.analysis import (
     AffectedResource,
@@ -135,7 +136,6 @@ KIND_ALIASES: dict[str, str] = {
 _TIME_WINDOW_RE = re.compile(r"^([0-9]+)(m|h|d)$")
 _DNS_SUBDOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9\-\.]{0,251}[a-z0-9])?$")
 
-_KUBERCA_VERSION = "0.1.2"
 _SCHEMA_VERSION = "1"
 
 
@@ -268,7 +268,7 @@ def _rule_result_to_rca_response(
         affected_resources=deduped_resources,
         suggested_remediation=rule_result.suggested_remediation,
         _meta=ResponseMeta(
-            kuberca_version=_KUBERCA_VERSION,
+            kuberca_version=__version__,
             schema_version=_SCHEMA_VERSION,
             cluster_id=cluster_id,
             timestamp=_utcnow_iso(),
@@ -331,7 +331,7 @@ def _llm_result_to_rca_response(
         affected_resources=_dedup_affected_resources(llm_result.affected_resources),
         suggested_remediation=llm_result.suggested_remediation,
         _meta=ResponseMeta(
-            kuberca_version=_KUBERCA_VERSION,
+            kuberca_version=__version__,
             schema_version=_SCHEMA_VERSION,
             cluster_id=cluster_id,
             timestamp=_utcnow_iso(),
@@ -360,7 +360,7 @@ def _inconclusive_response(
         affected_resources=[],
         suggested_remediation="",
         _meta=ResponseMeta(
-            kuberca_version=_KUBERCA_VERSION,
+            kuberca_version=__version__,
             schema_version=_SCHEMA_VERSION,
             cluster_id=cluster_id,
             timestamp=_utcnow_iso(),
