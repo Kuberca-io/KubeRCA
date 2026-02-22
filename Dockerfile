@@ -31,6 +31,7 @@ RUN uv venv "${VIRTUAL_ENV}" && \
     uv sync --active --frozen --no-dev --no-install-project
 
 # Now copy the full source and install the project package.
+COPY README.md ./
 COPY kuberca/ ./kuberca/
 RUN uv sync --active --frozen --no-dev
 
